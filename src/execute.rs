@@ -1,28 +1,8 @@
-use crate::{msg::ExecuteMsg, state::CONFIG, ContractError, ContractResult};
-#[cfg(not(feature = "library"))]
-use cosmwasm_std::entry_point;
+use crate::{state::CONFIG, ContractError, ContractResult};
 use cosmwasm_std::{attr, coin, BankMsg, Coin, CosmosMsg, DepsMut, Env, MessageInfo, Response};
 use neutron_sdk::bindings::msg::NeutronMsg;
 
-#[cfg_attr(not(feature = "library"), entry_point)]
-pub fn execute(
-    deps: DepsMut,
-    env: Env,
-    info: MessageInfo,
-    msg: ExecuteMsg,
-) -> ContractResult<Response<NeutronMsg>> {
-    match msg {
-        ExecuteMsg::Mint { receiver } => execute_mint(deps, env, info, receiver),
-        ExecuteMsg::Burn { receiver } => execute_burn(deps, env, info, receiver),
-        ExecuteMsg::UpdateConfig {
-            wsteth_denom,
-            subdenom,
-            owner,
-        } => execute_update_config(deps, info, wsteth_denom, subdenom, owner),
-    }
-}
-
-fn execute_mint(
+pub(crate) fn execute_mint(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
@@ -46,7 +26,7 @@ fn execute_mint(
     ]))
 }
 
-fn execute_burn(
+pub(crate) fn execute_burn(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
@@ -77,7 +57,7 @@ fn execute_burn(
         ]))
 }
 
-fn execute_update_config(
+pub(crate) fn execute_update_config(
     deps: DepsMut,
     info: MessageInfo,
     wsteth_denom: Option<String>,

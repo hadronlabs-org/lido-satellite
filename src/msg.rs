@@ -33,6 +33,7 @@ impl InstantiateMsg {
 }
 
 #[cw_serde]
+#[cfg_attr(feature = "interface", derive(cw_orch::ExecuteFns))]
 pub enum ExecuteMsg {
     /// This method expects user to send wsteth funds, which will be stored in the contract.
     /// User receives canonical wsteth funds, which are minted using tokenfactory module.
@@ -65,8 +66,12 @@ pub struct ConfigResponse {
 }
 
 #[cw_serde]
+#[cfg_attr(feature = "interface", derive(cw_orch::QueryFns))]
 #[derive(QueryResponses)]
 pub enum QueryMsg {
     #[returns(ConfigResponse)]
     Config {},
 }
+
+#[cw_serde]
+pub struct MigrateMsg {}

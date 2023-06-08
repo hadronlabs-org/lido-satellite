@@ -1,15 +1,17 @@
-mod error;
-mod execute;
-mod instantiate;
-mod query;
-
+pub mod contract;
+pub mod error;
 pub mod msg;
 pub mod state;
+
 pub use crate::error::{ContractError, ContractResult};
 
-pub mod contract {
-    pub use super::{execute::execute, instantiate::instantiate, query::query};
-}
+#[cfg(feature = "interface")]
+pub use crate::msg::{
+    ExecuteMsgFns as LidoSatelliteExecuteMsgFns, QueryMsgFns as LidoSatelliteQueryMsgFns,
+};
+
+mod execute;
+mod query;
 
 #[cfg(test)]
 mod tests;
