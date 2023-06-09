@@ -129,7 +129,7 @@ second_balance_after="$(get_balance "$SECOND_WALLET_ADDR" "uibcatom")"
 echo "Balance of main wallet: $main_balance_after"
 echo "Balance of second wallet: $second_balance_after"
 
-# I really don't want to trust bash my precious long arithmetic
+# I really don't want to trust bash my precious long arithmetics
 main_diff="$(python -c "print(${main_balance_after}-${main_balance_before})")"
 second_diff="$(python -c "print(${second_balance_after}-${second_balance_before})")"
 
