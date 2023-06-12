@@ -51,7 +51,7 @@ assert_success() {
   local code
   code="$(jq -r '.code' </dev/stdin)"
   if [[ $code -ne 0 ]]; then
-    echo "tx failed"
+    echo "[FAIL] tx failed"
     exit 1
   fi
 }
@@ -64,7 +64,7 @@ assert_balance() {
   local amount
   amount="$(get_balance "$1" "$2")"
   if [[ $amount -ne $3 ]]; then
-      echo "incorrect amount"
+      echo "[FAIL] incorrect amount"
       exit 1
   fi
   echo "$1 has correct amount of $2: $amount"
@@ -135,14 +135,14 @@ second_diff="$(python -c "print(${second_balance_after}-${second_balance_before}
 
 echo
 if [[ $main_diff -eq -3000 ]]; then
-  echo "Main wallet has lost 3000 wsteth"
+  echo "[OK] Main wallet has lost 3000 wsteth"
 else
-  echo "Main wallet wsteth diff: $main_diff, expected diff: -3000"
+  echo "[FAIL] Main wallet wsteth diff: $main_diff, expected diff: -3000"
   exit 1
 fi
 if [[ $second_diff -eq 500 ]]; then
-  echo "Second wallet has earned 500 wsteth"
+  echo "[OK] Second wallet has earned 500 wsteth"
 else
-  echo "Second wallet wsteth diff: $second_diff, expected diff: 500"
+  echo "[FAIL] Second wallet wsteth diff: $second_diff, expected diff: 500"
   exit 1
 fi
