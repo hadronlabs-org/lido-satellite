@@ -46,9 +46,9 @@ fn correct_funds() {
 
     assert_burn_send_messages_and_attrs(
         &response,
-        full_tokenfactory_denom,
         "stranger",
         10,
+        full_tokenfactory_denom,
         "wsteth",
     );
 }
@@ -71,9 +71,9 @@ fn mixed_funds() {
 
     assert_burn_send_messages_and_attrs(
         &response,
-        full_tokenfactory_denom,
         "stranger",
         10,
+        full_tokenfactory_denom,
         "wsteth",
     );
 }
@@ -95,25 +95,25 @@ fn with_custom_receiver() {
 
     assert_burn_send_messages_and_attrs(
         &response,
-        full_tokenfactory_denom,
         "benefitiary",
         12,
+        full_tokenfactory_denom,
         "wsteth",
     );
 }
 
 fn assert_burn_send_messages_and_attrs(
     response: &Response<NeutronMsg>,
-    full_tokenfactory_denom: impl Into<String>,
     receiver: &str,
     amount: u128,
-    wsteth_denom: impl Into<String>,
+    canonical_subdenom: impl Into<String>,
+    bridged_denom: impl Into<String>,
 ) {
     assert_eq!(response.messages.len(), 2);
     assert_eq!(
         response.messages[0].msg,
         NeutronMsg::BurnTokens {
-            denom: full_tokenfactory_denom.into(),
+            denom: canonical_subdenom.into(),
             amount: Uint128::new(amount),
             burn_from_address: "".to_string(),
         }
@@ -123,7 +123,7 @@ fn assert_burn_send_messages_and_attrs(
         response.messages[1].msg,
         BankMsg::Send {
             to_address: receiver.to_string(),
-            amount: vec![coin(amount, wsteth_denom)]
+            amount: vec![coin(amount, bridged_denom)]
         }
         .into()
     );

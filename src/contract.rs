@@ -24,17 +24,17 @@ pub fn instantiate(
 
     msg.validate()?;
     let config = Config {
-        wsteth_denom: msg.wsteth_denom,
-        subdenom: msg.subdenom,
+        bridged_denom: msg.bridged_denom,
+        canonical_subdenom: msg.canonical_subdenom,
     };
     CONFIG.save(deps.storage, &config)?;
 
-    let create_denom_msg = NeutronMsg::submit_create_denom(&config.subdenom);
+    let create_denom_msg = NeutronMsg::submit_create_denom(&config.canonical_subdenom);
     Ok(Response::new()
         .add_message(create_denom_msg)
         .add_attributes([
-            attr("wsteth_denom", config.wsteth_denom),
-            attr("subdenom", config.subdenom),
+            attr("bridged_denom", config.bridged_denom),
+            attr("canonical_subdenom", config.canonical_subdenom),
         ]))
 }
 

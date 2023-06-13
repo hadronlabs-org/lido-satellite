@@ -12,10 +12,10 @@ pub enum ContractError {
     #[error("denom field {kind} should not be empty")]
     EmptyDenom { kind: String },
 
-    #[error("nothing to burn: canonical wsteth funds should be provided")]
+    #[error("nothing to burn: canonical funds should be provided")]
     NothingToBurn {},
 
-    #[error("nothing to mint: wsteth funds should be provided")]
+    #[error("nothing to mint: bridged funds should be provided")]
     NothingToMint {},
 }
 

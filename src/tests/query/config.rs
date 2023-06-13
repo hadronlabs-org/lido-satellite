@@ -13,8 +13,8 @@ fn corresponds_to_instantiate_params() {
     assert_eq!(
         config_response,
         ConfigResponse {
-            wsteth_denom: "wsteth".to_string(),
-            subdenom: "eth".to_string(),
+            bridged_denom: "wsteth".to_string(),
+            canonical_subdenom: "eth".to_string(),
         }
     );
 }

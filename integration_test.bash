@@ -73,7 +73,7 @@ assert_balance() {
 code_id="$(neutrond tx wasm store "$CONTRACT_PATH" --from "$MAIN_WALLET" "${tx[@]}" | jq -r "$(select_attr "store_code" "code_id")")"
 echo "Code ID: $code_id"
 
-msg='{"wsteth_denom":"uibcatom","subdenom":"steth"}'
+msg='{"bridged_denom":"uibcatom","canonical_subdenom":"steth"}'
 contract_address="$(neutrond tx wasm instantiate "$code_id" "$msg" --amount 1000000untrn --no-admin --label steth --from "$MAIN_WALLET" "${tx[@]}" | jq -r "$(select_attr "instantiate" "_contract_address")")"
 echo "Contract address: $contract_address"
 
@@ -135,14 +135,14 @@ second_diff="$(python -c "print(${second_balance_after}-${second_balance_before}
 
 echo
 if [[ $main_diff -eq -3000 ]]; then
-  echo "[OK] Main wallet has lost 3000 wsteth"
+  echo "[OK] Main wallet has lost 3000 uibcatom"
 else
-  echo "[FAIL] Main wallet wsteth diff: $main_diff, expected diff: -3000"
+  echo "[FAIL] Main wallet uibcatom diff: $main_diff, expected diff: -3000"
   exit 1
 fi
 if [[ $second_diff -eq 500 ]]; then
-  echo "[OK] Second wallet has earned 500 wsteth"
+  echo "[OK] Second wallet has earned 500 uibcatom"
 else
-  echo "[FAIL] Second wallet wsteth diff: $second_diff, expected diff: 500"
+  echo "[FAIL] Second wallet uibcatom diff: $second_diff, expected diff: 500"
   exit 1
 fi

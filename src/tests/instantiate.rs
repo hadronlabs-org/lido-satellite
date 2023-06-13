@@ -13,25 +13,25 @@ fn empty_denoms() {
 }
 
 #[test]
-fn empty_wsteth_denom() {
+fn empty_bridged_denom() {
     let (result, _deps, _env) = instantiate_wrapper("", "subdenom");
     let err = result.unwrap_err();
     assert_eq!(
         err,
         ContractError::EmptyDenom {
-            kind: "wsteth_denom".to_string()
+            kind: "bridged_denom".to_string()
         }
     );
 }
 
 #[test]
-fn empty_subdenom() {
+fn empty_canonical_subdenom() {
     let (result, _deps, _env) = instantiate_wrapper("wsteth", "");
     let err = result.unwrap_err();
     assert_eq!(
         err,
         ContractError::EmptyDenom {
-            kind: "subdenom".to_string()
+            kind: "canonical_subdenom".to_string()
         }
     );
 }
@@ -46,22 +46,22 @@ fn success() {
 
 fn assert_create_denom_msg_and_attrs(
     response: &Response<NeutronMsg>,
-    wsteth_denom: &str,
-    subdenom: &str,
+    bridged_denom: &str,
+    canonical_subdenom: &str,
 ) {
     assert_eq!(response.messages.len(), 1);
     assert_eq!(
         response.messages[0].msg,
         NeutronMsg::CreateDenom {
-            subdenom: subdenom.to_string()
+            subdenom: canonical_subdenom.to_string()
         }
         .into()
     );
     assert_eq!(
         response.attributes,
         vec![
-            attr("wsteth_denom", wsteth_denom),
-            attr("subdenom", subdenom),
+            attr("bridged_denom", bridged_denom),
+            attr("canonical_subdenom", canonical_subdenom),
         ]
     );
 }

@@ -12,16 +12,16 @@ pub(crate) fn execute_mint(
     let full_tokenfactory_denom = config.get_full_tokenfactory_denom(env.contract.address);
     let receiver = receiver.map_or(Ok(info.sender), |addr| deps.api.addr_validate(&addr))?;
 
-    let wsteth_fund =
-        find_denom(&info.funds, &config.wsteth_denom).ok_or(ContractError::NothingToMint {})?;
+    let bridged_funds =
+        find_denom(&info.funds, &config.bridged_denom).ok_or(ContractError::NothingToMint {})?;
 
     let mint_msg: CosmosMsg<NeutronMsg> =
-        NeutronMsg::submit_mint_tokens(full_tokenfactory_denom, wsteth_fund.amount, &receiver)
+        NeutronMsg::submit_mint_tokens(full_tokenfactory_denom, bridged_funds.amount, &receiver)
             .into();
 
     Ok(Response::new().add_message(mint_msg).add_attributes([
         attr("action", "mint"),
-        attr("amount", wsteth_fund.amount),
+        attr("amount", bridged_funds.amount),
         attr("to", receiver),
     ]))
 }
@@ -44,7 +44,7 @@ pub(crate) fn execute_burn(
         NeutronMsg::submit_burn_tokens(full_tokenfactory_denom, amount_to_burn).into();
     let send_msg = BankMsg::Send {
         to_address: receiver.to_string(),
-        amount: vec![coin(amount_to_burn.u128(), config.wsteth_denom)],
+        amount: vec![coin(amount_to_burn.u128(), config.bridged_denom)],
     }
     .into();
 

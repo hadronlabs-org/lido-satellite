@@ -9,8 +9,8 @@
 It is expected to print
 
 ```
-[OK] Main wallet has lost 3000 wsteth
-[OK] Second wallet has earned 500 wsteth
+[OK] Main wallet has lost 3000 uibcatom
+[OK] Second wallet has earned 500 uibcatom
 
 INTEGRATION TESTS SUCCEDED
 ```

@@ -11,8 +11,8 @@ use cosmwasm_std::{
 use neutron_sdk::bindings::msg::NeutronMsg;
 
 pub fn instantiate_wrapper(
-    wsteth_denom: impl Into<String>,
-    subdenom: impl Into<String>,
+    bridged_denom: impl Into<String>,
+    canonical_subdenom: impl Into<String>,
 ) -> (
     ContractResult<Response<NeutronMsg>>,
     OwnedDeps<MockStorage, MockApi, MockQuerier>,
@@ -26,8 +26,8 @@ pub fn instantiate_wrapper(
             env.clone(),
             mock_info("admin", &[]),
             InstantiateMsg {
-                wsteth_denom: wsteth_denom.into(),
-                subdenom: subdenom.into(),
+                bridged_denom: bridged_denom.into(),
+                canonical_subdenom: canonical_subdenom.into(),
             },
         ),
         deps,
@@ -35,13 +35,13 @@ pub fn instantiate_wrapper(
     )
 }
 
-pub fn assert_config(deps: Deps, wsteth_denom: &str, subdenom: &str) {
+pub fn assert_config(deps: Deps, bridged_denom: &str, canonical_subdenom: &str) {
     let config = CONFIG.load(deps.storage).unwrap();
     assert_eq!(
         config,
         Config {
-            wsteth_denom: wsteth_denom.to_string(),
-            subdenom: subdenom.to_string(),
+            bridged_denom: bridged_denom.to_string(),
+            canonical_subdenom: canonical_subdenom.to_string(),
         }
     )
 }
