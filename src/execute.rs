@@ -57,37 +57,6 @@ pub(crate) fn execute_burn(
         ]))
 }
 
-pub(crate) fn execute_update_config(
-    deps: DepsMut,
-    info: MessageInfo,
-    wsteth_denom: Option<String>,
-    subdenom: Option<String>,
-    owner: Option<String>,
-) -> ContractResult<Response<NeutronMsg>> {
-    let mut config = CONFIG.load(deps.storage)?;
-    let mut attributes = vec![attr("action", "update_config")];
-
-    if config.owner != info.sender {
-        return Err(ContractError::Unautorized {});
-    }
-
-    if let Some(wsteth_denom) = wsteth_denom {
-        config.wsteth_denom = wsteth_denom;
-        attributes.push(attr("new_wsteth_denom", &config.wsteth_denom));
-    }
-    if let Some(subdenom) = subdenom {
-        config.subdenom = subdenom;
-        attributes.push(attr("new_subdenom", &config.subdenom));
-    }
-    if let Some(owner) = owner {
-        config.owner = deps.api.addr_validate(&owner)?;
-        attributes.push(attr("new_owner", &config.owner));
-    }
-
-    CONFIG.save(deps.storage, &config)?;
-    Ok(Response::new().add_attributes(attributes))
-}
-
 fn find_denom<'a>(funds: &'a [Coin], target_denom: &str) -> Option<&'a Coin> {
     funds.iter().find(|fund| fund.denom == target_denom)
 }

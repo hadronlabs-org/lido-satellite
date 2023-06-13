@@ -6,6 +6,5 @@ pub(crate) fn query_config(deps: Deps) -> ContractResult<Binary> {
     Ok(to_binary(&ConfigResponse {
         wsteth_denom: config.wsteth_denom,
         subdenom: config.subdenom,
-        owner: config.owner.into_string(),
     })?)
 }

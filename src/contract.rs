@@ -1,5 +1,5 @@
 use crate::{
-    execute::{execute_burn, execute_mint, execute_update_config},
+    execute::{execute_burn, execute_mint},
     msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg},
     query::query_config,
     state::{Config, CONFIG},
@@ -17,31 +17,24 @@ const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 pub fn instantiate(
     deps: DepsMut,
     _env: Env,
-    info: MessageInfo,
+    _info: MessageInfo,
     msg: InstantiateMsg,
 ) -> ContractResult<Response<NeutronMsg>> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
     msg.validate()?;
-    let owner = msg
-        .owner
-        .map_or(Ok(info.sender), |addr| deps.api.addr_validate(&addr))?;
-
     let config = Config {
         wsteth_denom: msg.wsteth_denom,
         subdenom: msg.subdenom,
-        owner,
     };
     CONFIG.save(deps.storage, &config)?;
 
     let create_denom_msg = NeutronMsg::submit_create_denom(&config.subdenom);
-
     Ok(Response::new()
         .add_message(create_denom_msg)
         .add_attributes([
             attr("wsteth_denom", config.wsteth_denom),
             attr("subdenom", config.subdenom),
-            attr("owner", config.owner.into_string()),
         ]))
 }
 
@@ -56,11 +49,6 @@ pub fn execute(
     match msg {
         ExecuteMsg::Mint { receiver } => execute_mint(deps, env, info, receiver),
         ExecuteMsg::Burn { receiver } => execute_burn(deps, env, info, receiver),
-        ExecuteMsg::UpdateConfig {
-            wsteth_denom,
-            subdenom,
-            owner,
-        } => execute_update_config(deps, info, wsteth_denom, subdenom, owner),
     }
 }
 

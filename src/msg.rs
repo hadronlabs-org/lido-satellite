@@ -10,10 +10,6 @@ pub struct InstantiateMsg {
     /// Users are expected to send this denom with [`ExecuteMsg::Burn`] message in order to
     /// receive original wsteth funds back.
     pub subdenom: String,
-    /// Optionally set owner of the contract. When this field is omitted, owner is assigned
-    /// to instantiator. Owner can update all fields in contract's [Config](crate::state::Config)
-    /// using [`ExecuteMsg::UpdateConfig`]
-    pub owner: Option<String>,
 }
 
 impl InstantiateMsg {
@@ -49,20 +45,12 @@ pub enum ExecuteMsg {
         /// to any address specified in this field.
         receiver: Option<String>,
     },
-    /// Updates config, if any of the supported values are set. If none are set,
-    /// do nothing. This message is permissioned and can only be executed by owner.
-    UpdateConfig {
-        wsteth_denom: Option<String>,
-        subdenom: Option<String>,
-        owner: Option<String>,
-    },
 }
 
 #[cw_serde]
 pub struct ConfigResponse {
     pub wsteth_denom: String,
     pub subdenom: String,
-    pub owner: String,
 }
 
 #[cw_serde]

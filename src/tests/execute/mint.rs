@@ -6,7 +6,7 @@ use neutron_sdk::bindings::msg::NeutronMsg;
 
 #[test]
 fn no_funds() {
-    let (_result, mut deps, env) = instantiate_wrapper("wsteth", "eth", "owner", None);
+    let (_result, mut deps, env) = instantiate_wrapper("wsteth", "eth");
     let err = execute(
         deps.as_mut(),
         env,
@@ -19,7 +19,7 @@ fn no_funds() {
 
 #[test]
 fn incorrect_funds() {
-    let (_result, mut deps, env) = instantiate_wrapper("wsteth", "eth", "owner", None);
+    let (_result, mut deps, env) = instantiate_wrapper("wsteth", "eth");
     let err = execute(
         deps.as_mut(),
         env,
@@ -32,7 +32,7 @@ fn incorrect_funds() {
 
 #[test]
 fn correct_funds() {
-    let (_result, mut deps, env) = instantiate_wrapper("wsteth", "eth", "owner", None);
+    let (_result, mut deps, env) = instantiate_wrapper("wsteth", "eth");
     let response = execute(
         deps.as_mut(),
         env.clone(),
@@ -45,7 +45,7 @@ fn correct_funds() {
 
 #[test]
 fn mixed_funds() {
-    let (_result, mut deps, env) = instantiate_wrapper("wsteth", "eth", "owner", None);
+    let (_result, mut deps, env) = instantiate_wrapper("wsteth", "eth");
     let response = execute(
         deps.as_mut(),
         env.clone(),
@@ -58,7 +58,7 @@ fn mixed_funds() {
 
 #[test]
 fn with_custom_receiver() {
-    let (_result, mut deps, env) = instantiate_wrapper("wsteth", "eth", "owner", None);
+    let (_result, mut deps, env) = instantiate_wrapper("wsteth", "eth");
     let response = execute(
         deps.as_mut(),
         env.clone(),

@@ -7,14 +7,14 @@ use neutron_sdk::bindings::msg::NeutronMsg;
 
 #[test]
 fn empty_denoms() {
-    let (result, _deps, _env) = instantiate_wrapper("", "", "owner", None);
+    let (result, _deps, _env) = instantiate_wrapper("", "");
     let err = result.unwrap_err();
     assert!(matches!(err, ContractError::EmptyDenom { .. }))
 }
 
 #[test]
 fn empty_wsteth_denom() {
-    let (result, _deps, _env) = instantiate_wrapper("", "subdenom", "owner", None);
+    let (result, _deps, _env) = instantiate_wrapper("", "subdenom");
     let err = result.unwrap_err();
     assert_eq!(
         err,
@@ -26,7 +26,7 @@ fn empty_wsteth_denom() {
 
 #[test]
 fn empty_subdenom() {
-    let (result, _deps, _env) = instantiate_wrapper("wsteth", "", "owner", None);
+    let (result, _deps, _env) = instantiate_wrapper("wsteth", "");
     let err = result.unwrap_err();
     assert_eq!(
         err,
@@ -37,26 +37,17 @@ fn empty_subdenom() {
 }
 
 #[test]
-fn without_owner() {
-    let (result, deps, _env) = instantiate_wrapper("wsteth", "subdenom", "owner", None);
+fn success() {
+    let (result, deps, _env) = instantiate_wrapper("wsteth", "subdenom");
     let response = result.unwrap();
-    assert_create_denom_msg_and_attrs(&response, "wsteth", "subdenom", "owner");
-    assert_config(deps.as_ref(), "wsteth", "subdenom", "owner");
-}
-
-#[test]
-fn with_explicit_owner() {
-    let (result, deps, _env) = instantiate_wrapper("wsteth", "subdenom", "owner", Some("multisig"));
-    let response = result.unwrap();
-    assert_create_denom_msg_and_attrs(&response, "wsteth", "subdenom", "multisig");
-    assert_config(deps.as_ref(), "wsteth", "subdenom", "multisig");
+    assert_create_denom_msg_and_attrs(&response, "wsteth", "subdenom");
+    assert_config(deps.as_ref(), "wsteth", "subdenom");
 }
 
 fn assert_create_denom_msg_and_attrs(
     response: &Response<NeutronMsg>,
     wsteth_denom: &str,
     subdenom: &str,
-    owner: &str,
 ) {
     assert_eq!(response.messages.len(), 1);
     assert_eq!(
@@ -71,7 +62,6 @@ fn assert_create_denom_msg_and_attrs(
         vec![
             attr("wsteth_denom", wsteth_denom),
             attr("subdenom", subdenom),
-            attr("owner", owner)
         ]
     );
 }

@@ -17,9 +17,6 @@ pub enum ContractError {
 
     #[error("nothing to mint: wsteth funds should be provided")]
     NothingToMint {},
-
-    #[error("unauthorized")]
-    Unautorized {},
 }
 
 pub type ContractResult<T> = Result<T, ContractError>;
