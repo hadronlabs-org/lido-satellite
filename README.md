@@ -29,7 +29,7 @@ neutrond tx wasm instantiate 42                                \
 
 This example assumes bridged denomination is `ibc/12345`. Resulting canonical
 denomination will be of form `factory/$contract_address/steth`,
-where `$contract_address` is the address of instantiated contract, and `steth`
+where `$contract_address` is the address of instantiated contract, and `wsteth`
 is a string value `canonical_subdenom` we have just set in the instantiate message.
 
 ## Tests
