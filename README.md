@@ -23,7 +23,7 @@ like this:
 
 ```bash
 neutrond tx wasm instantiate 42                                \
-  '{"bridged_denom":"ibc/12345","canonical_subdenom":"steth"}' \
+  '{"bridged_denom":"ibc/12345","canonical_subdenom":"wsteth"}' \
   --amount 1000000untrn
 ```
 
