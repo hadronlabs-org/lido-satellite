@@ -1,3 +1,7 @@
+// This is a failed attempt to write integration tests using cw-orch
+// TODO: try again when https://github.com/AbstractSDK/cw-orchestrator/issues/143
+//       is resolved
+
 /*use cw_orch::{anyhow, prelude::*, tokio};
 use lido_satellite::msg::InstantiateMsg;
 use tokio::runtime::Runtime;
