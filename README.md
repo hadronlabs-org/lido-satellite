@@ -2,7 +2,7 @@
 
 ## Overview
 
-This contract is designed to enforce a canonical denom for any kind of bridged steth fund,
+This contract is designed to enforce a canonical denom for any kind of bridged wsteth fund,
 since there may be different ways to bridge it, and having a single interoperable canonical demon
 will make operations on them much easier.
 
@@ -28,7 +28,7 @@ neutrond tx wasm instantiate 42                                \
 ```
 
 This example assumes bridged denomination is `ibc/12345`. Resulting canonical
-denomination will be of form `factory/$contract_address/steth`,
+denomination will be of form `factory/$contract_address/wsteth`,
 where `$contract_address` is the address of instantiated contract, and `wsteth`
 is a string value `canonical_subdenom` we have just set in the instantiate message.
 
