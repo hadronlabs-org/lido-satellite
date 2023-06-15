@@ -51,3 +51,4 @@ cw-orch = { version = "0.13.0", features = ["daemon"] }
 [[example]]
 name = "deploy"
 path = "src/examples/deploy.rs"
+required-features = ["interface"]

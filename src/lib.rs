@@ -7,8 +7,8 @@ pub use crate::error::{ContractError, ContractResult};
 
 #[cfg(feature = "interface")]
 pub use crate::{
+    contract::LidoSatellite,
     msg::{ExecuteMsgFns as LidoSatelliteExecuteMsgFns, QueryMsgFns as LidoSatelliteQueryMsgFns},
-    LidoSatellite,
 };
 
 mod execute;

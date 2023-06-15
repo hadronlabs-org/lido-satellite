@@ -9,8 +9,8 @@ use cosmwasm_std::{attr, Binary, Deps, DepsMut, Env, MessageInfo, Response};
 use cw2::set_contract_version;
 use neutron_sdk::bindings::msg::NeutronMsg;
 
-const CONTRACT_NAME: &str = "crates.io:lido-satellite";
-const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
+pub const CONTRACT_NAME: &str = "crates.io:lido-satellite";
+pub const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[cfg_attr(not(feature = "library"), cosmwasm_std::entry_point)]
 #[cfg_attr(feature = "interface", cw_orch::interface_entry_point)]
