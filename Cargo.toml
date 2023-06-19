@@ -1,19 +1,11 @@
-[package]
-name = "lido-satellite"
-version = "0.1.0"
+[workspace]
+members = [ "contracts/*" ]
+
+[workspace.package]
 authors = ["Murad Karammaev <muradkarammaev@gmail.com>"]
 edition = "2021"
-
-exclude = [
-  # Those files are rust-optimizer artifacts. You might want to commit them for convenience but they should not be part of the source code publication.
-  "contract.wasm",
-  "hash.txt",
-]
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[lib]
-crate-type = ["cdylib", "rlib"]
+license = "GPL-3.0-only"
+version = "0.1.0"
 
 [profile.release]
 opt-level = 3
@@ -25,30 +17,3 @@ codegen-units = 1
 panic = 'abort'
 incremental = false
 overflow-checks = true
-
-[features]
-# for more explicit tests, cargo test --features=backtraces
-backtraces = ["cosmwasm-std/backtraces"]
-# cw-orchestrator integration tests
-interface = ["dep:cw-orch"]
-# use library feature to disable all instantiate/execute/query exports
-library = []
-
-[dependencies]
-cosmwasm-schema = "1.2.6"
-cosmwasm-std = "1.2.6"
-cw-storage-plus = "1.0.1"
-neutron-sdk = "0.5.0"
-cw2 = "1.0.1"
-thiserror = "1.0.40"
-cw-orch = { version = "0.13.0", optional = true }
-
-[dev-dependencies]
-dotenv = { version = "0.15.0" }
-env_logger = { version = "0.10.0" }
-cw-orch = { version = "0.13.0", features = ["daemon"] }
-
-[[example]]
-name = "deploy"
-path = "src/examples/deploy.rs"
-required-features = ["interface"]
