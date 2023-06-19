@@ -1,3 +1,4 @@
+use cosmwasm_std::coin;
 use cw_orch::{anyhow, prelude::*, tokio};
 use lido_satellite::{msg::InstantiateMsg, LidoSatellite};
 use tokio::runtime::Runtime;
@@ -18,11 +19,11 @@ pub fn main() -> anyhow::Result<()> {
     satellite.upload()?;
     satellite.instantiate(
         &InstantiateMsg {
-            bridged_denom: "".to_string(),
-            canonical_subdenom: "".to_string(),
+            bridged_denom: "uibcatom".to_string(),
+            canonical_subdenom: "wsteth".to_string(),
         },
         None,
-        None,
+        Some(&[coin(1000000, "untrn")]),
     )?;
     Ok(())
 }
