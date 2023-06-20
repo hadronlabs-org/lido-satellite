@@ -13,7 +13,6 @@ pub const CONTRACT_NAME: &str = "crates.io:lido-satellite";
 pub const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[cfg_attr(not(feature = "library"), cosmwasm_std::entry_point)]
-#[cfg_attr(feature = "interface", cw_orch::interface_entry_point)]
 pub fn instantiate(
     deps: DepsMut,
     _env: Env,
@@ -39,7 +38,6 @@ pub fn instantiate(
 }
 
 #[cfg_attr(not(feature = "library"), cosmwasm_std::entry_point)]
-#[cfg_attr(feature = "interface", cw_orch::interface_entry_point)]
 pub fn execute(
     deps: DepsMut,
     env: Env,
@@ -53,7 +51,6 @@ pub fn execute(
 }
 
 #[cfg_attr(not(feature = "library"), cosmwasm_std::entry_point)]
-#[cfg_attr(feature = "interface", cw_orch::interface_entry_point)]
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> ContractResult<Binary> {
     match msg {
         QueryMsg::Config {} => query_config(deps),
@@ -61,7 +58,6 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> ContractResult<Binary> {
 }
 
 #[cfg_attr(not(feature = "library"), cosmwasm_std::entry_point)]
-#[cfg_attr(feature = "interface", cw_orch::interface_entry_point)]
 pub fn migrate(_deps: DepsMut, _env: Env, _msg: MigrateMsg) -> ContractResult<Response> {
     Ok(Response::new())
 }

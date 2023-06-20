@@ -4,7 +4,7 @@ members = [ "contracts/*" ]
 [workspace.package]
 authors = ["Murad Karammaev <muradkarammaev@gmail.com>"]
 edition = "2021"
-license = "GPL-3.0-only"
+license = "Apache-2.0"
 version = "0.1.0"
 
 [profile.release]

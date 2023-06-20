@@ -29,7 +29,6 @@ impl InstantiateMsg {
 }
 
 #[cw_serde]
-#[cfg_attr(feature = "interface", derive(cw_orch::ExecuteFns))]
 pub enum ExecuteMsg {
     /// This method expects users to send bridged funds, which will be locked in contract.
     /// In exchange, users receive canonical funds, which are minted by tokenfactory module.
@@ -54,7 +53,6 @@ pub struct ConfigResponse {
 }
 
 #[cw_serde]
-#[cfg_attr(feature = "interface", derive(cw_orch::QueryFns))]
 #[derive(QueryResponses)]
 pub enum QueryMsg {
     #[returns(ConfigResponse)]
