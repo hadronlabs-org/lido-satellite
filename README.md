@@ -36,15 +36,15 @@ is a string value `canonical_subdenom` we have just set in the instantiate messa
 
 In order to run integration tests:
 
-1. Go to neutron's folder and run `make start`, wait for chain to launch
+1. Go to neutron's folder and run `make init && make start-rly`, wait for chain and hermes to launch
 2. Get back to lido-satellite's folder and run `make build`
 3. Run `./integration_test.bash` and wait until it finishes
 
 It is expected to print
 
 ```
-[OK] Main wallet has lost 3000 uibcatom
-[OK] Second wallet has earned 500 uibcatom
+[OK] Main wallet has lost 3000 ibc/27394FB092D2ECCD56123C74F36E4C1F926001CEADA9CA97EA622B25F41E5EB2
+[OK] Second wallet has earned 500 ibc/27394FB092D2ECCD56123C74F36E4C1F926001CEADA9CA97EA622B25F41E5EB2
 
 INTEGRATION TESTS SUCCEDED
 ```

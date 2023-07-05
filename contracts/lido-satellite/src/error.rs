@@ -12,6 +12,9 @@ pub enum ContractError {
     #[error("denom field {kind} should not be empty")]
     EmptyDenom { kind: String },
 
+    #[error("denom {denom} is not a correct IBC denom: {reason}")]
+    InvalidIbcDenom { denom: String, reason: String },
+
     #[error("nothing to burn: canonical funds should be provided")]
     NothingToBurn {},
 

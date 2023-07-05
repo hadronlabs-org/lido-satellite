@@ -1,5 +1,8 @@
 use crate::{
-    contract::execute, msg::ExecuteMsg, state::CONFIG, tests::helpers::instantiate_wrapper,
+    contract::execute,
+    msg::ExecuteMsg,
+    state::CONFIG,
+    tests::helpers::{instantiate_wrapper, VALID_IBC_DENOM},
     ContractError,
 };
 use cosmwasm_std::{attr, coin, testing::mock_info, BankMsg, Response, Uint128};
@@ -7,7 +10,7 @@ use neutron_sdk::bindings::msg::NeutronMsg;
 
 #[test]
 fn no_funds() {
-    let (_result, mut deps, env) = instantiate_wrapper("wsteth", "eth");
+    let (_result, mut deps, env) = instantiate_wrapper(VALID_IBC_DENOM, "eth");
     let err = execute(
         deps.as_mut(),
         env,
@@ -20,7 +23,7 @@ fn no_funds() {
 
 #[test]
 fn incorrect_funds() {
-    let (_result, mut deps, env) = instantiate_wrapper("wsteth", "eth");
+    let (_result, mut deps, env) = instantiate_wrapper(VALID_IBC_DENOM, "eth");
     let err = execute(
         deps.as_mut(),
         env,
@@ -33,7 +36,7 @@ fn incorrect_funds() {
 
 #[test]
 fn correct_funds() {
-    let (_result, mut deps, env) = instantiate_wrapper("wsteth", "eth");
+    let (_result, mut deps, env) = instantiate_wrapper(VALID_IBC_DENOM, "eth");
     let config = CONFIG.load(deps.as_mut().storage).unwrap();
     let full_tokenfactory_denom = config.get_full_tokenfactory_denom(&env.contract.address);
     let response = execute(
@@ -49,13 +52,13 @@ fn correct_funds() {
         "stranger",
         10,
         full_tokenfactory_denom,
-        "wsteth",
+        VALID_IBC_DENOM,
     );
 }
 
 #[test]
 fn mixed_funds() {
-    let (_result, mut deps, env) = instantiate_wrapper("wsteth", "eth");
+    let (_result, mut deps, env) = instantiate_wrapper(VALID_IBC_DENOM, "eth");
     let config = CONFIG.load(deps.as_mut().storage).unwrap();
     let full_tokenfactory_denom = config.get_full_tokenfactory_denom(&env.contract.address);
     let response = execute(
@@ -74,13 +77,13 @@ fn mixed_funds() {
         "stranger",
         10,
         full_tokenfactory_denom,
-        "wsteth",
+        VALID_IBC_DENOM,
     );
 }
 
 #[test]
 fn with_custom_receiver() {
-    let (_result, mut deps, env) = instantiate_wrapper("wsteth", "eth");
+    let (_result, mut deps, env) = instantiate_wrapper(VALID_IBC_DENOM, "eth");
     let config = CONFIG.load(deps.as_mut().storage).unwrap();
     let full_tokenfactory_denom = config.get_full_tokenfactory_denom(&env.contract.address);
     let response = execute(
@@ -98,7 +101,7 @@ fn with_custom_receiver() {
         "benefitiary",
         12,
         full_tokenfactory_denom,
-        "wsteth",
+        VALID_IBC_DENOM,
     );
 }
 

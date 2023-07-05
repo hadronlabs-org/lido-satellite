@@ -1,12 +1,15 @@
 use crate::{
-    contract::execute, msg::ExecuteMsg, tests::helpers::instantiate_wrapper, ContractError,
+    contract::execute,
+    msg::ExecuteMsg,
+    tests::helpers::{instantiate_wrapper, VALID_IBC_DENOM},
+    ContractError,
 };
 use cosmwasm_std::{attr, coin, testing::mock_info, Response, Uint128};
 use neutron_sdk::bindings::msg::NeutronMsg;
 
 #[test]
 fn no_funds() {
-    let (_result, mut deps, env) = instantiate_wrapper("wsteth", "eth");
+    let (_result, mut deps, env) = instantiate_wrapper(VALID_IBC_DENOM, "eth");
     let err = execute(
         deps.as_mut(),
         env,
@@ -19,7 +22,7 @@ fn no_funds() {
 
 #[test]
 fn incorrect_funds() {
-    let (_result, mut deps, env) = instantiate_wrapper("wsteth", "eth");
+    let (_result, mut deps, env) = instantiate_wrapper(VALID_IBC_DENOM, "eth");
     let err = execute(
         deps.as_mut(),
         env,
@@ -32,11 +35,11 @@ fn incorrect_funds() {
 
 #[test]
 fn correct_funds() {
-    let (_result, mut deps, env) = instantiate_wrapper("wsteth", "eth");
+    let (_result, mut deps, env) = instantiate_wrapper(VALID_IBC_DENOM, "eth");
     let response = execute(
         deps.as_mut(),
         env.clone(),
-        mock_info("stranger", &[coin(10, "wsteth")]),
+        mock_info("stranger", &[coin(10, VALID_IBC_DENOM)]),
         ExecuteMsg::Mint { receiver: None },
     )
     .unwrap();
@@ -45,11 +48,11 @@ fn correct_funds() {
 
 #[test]
 fn mixed_funds() {
-    let (_result, mut deps, env) = instantiate_wrapper("wsteth", "eth");
+    let (_result, mut deps, env) = instantiate_wrapper(VALID_IBC_DENOM, "eth");
     let response = execute(
         deps.as_mut(),
         env.clone(),
-        mock_info("stranger", &[coin(10, "wsteth"), coin(20, "ldo")]),
+        mock_info("stranger", &[coin(10, VALID_IBC_DENOM), coin(20, "ldo")]),
         ExecuteMsg::Mint { receiver: None },
     )
     .unwrap();
@@ -58,11 +61,11 @@ fn mixed_funds() {
 
 #[test]
 fn with_custom_receiver() {
-    let (_result, mut deps, env) = instantiate_wrapper("wsteth", "eth");
+    let (_result, mut deps, env) = instantiate_wrapper(VALID_IBC_DENOM, "eth");
     let response = execute(
         deps.as_mut(),
         env.clone(),
-        mock_info("stranger", &[coin(11, "wsteth")]),
+        mock_info("stranger", &[coin(11, VALID_IBC_DENOM)]),
         ExecuteMsg::Mint {
             receiver: Some("benefitiary".to_string()),
         },

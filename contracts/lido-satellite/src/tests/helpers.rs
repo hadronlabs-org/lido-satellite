@@ -10,6 +10,9 @@ use cosmwasm_std::{
 };
 use neutron_sdk::bindings::msg::NeutronMsg;
 
+pub const VALID_IBC_DENOM: &str =
+    "ibc/584A4A23736884E0C198FD1EE932455A9357A492A7B94324E4A02B5628687831";
+
 pub fn instantiate_wrapper(
     bridged_denom: impl Into<String>,
     canonical_subdenom: impl Into<String>,
