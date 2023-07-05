@@ -49,14 +49,14 @@ fn correct_funds() {
 #[test]
 fn mixed_funds() {
     let (_result, mut deps, env) = instantiate_wrapper(VALID_IBC_DENOM, "eth");
-    let response = execute(
+    let err = execute(
         deps.as_mut(),
-        env.clone(),
+        env,
         mock_info("stranger", &[coin(10, VALID_IBC_DENOM), coin(20, "ldo")]),
         ExecuteMsg::Mint { receiver: None },
     )
-    .unwrap();
-    assert_mint_message_and_attrs(&response, env.contract.address, "stranger", 10);
+    .unwrap_err();
+    assert_eq!(err, ContractError::ExtraFunds {});
 }
 
 #[test]

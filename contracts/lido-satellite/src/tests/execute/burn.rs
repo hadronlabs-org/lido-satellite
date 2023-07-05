@@ -61,24 +61,17 @@ fn mixed_funds() {
     let (_result, mut deps, env) = instantiate_wrapper(VALID_IBC_DENOM, "eth");
     let config = CONFIG.load(deps.as_mut().storage).unwrap();
     let full_tokenfactory_denom = config.get_full_tokenfactory_denom(&env.contract.address);
-    let response = execute(
+    let err = execute(
         deps.as_mut(),
         env,
         mock_info(
             "stranger",
-            &[coin(10, &full_tokenfactory_denom), coin(20, "ldo")],
+            &[coin(10, full_tokenfactory_denom), coin(20, "ldo")],
         ),
         ExecuteMsg::Burn { receiver: None },
     )
-    .unwrap();
-
-    assert_burn_send_messages_and_attrs(
-        &response,
-        "stranger",
-        10,
-        full_tokenfactory_denom,
-        VALID_IBC_DENOM,
-    );
+    .unwrap_err();
+    assert_eq!(err, ContractError::ExtraFunds {});
 }
 
 #[test]

@@ -20,6 +20,9 @@ pub enum ContractError {
 
     #[error("nothing to mint: bridged funds should be provided")]
     NothingToMint {},
+
+    #[error("extra funds have been supplied")]
+    ExtraFunds {},
 }
 
 pub type ContractResult<T> = Result<T, ContractError>;
