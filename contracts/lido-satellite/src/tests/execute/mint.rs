@@ -38,12 +38,12 @@ fn correct_funds() {
     let (_result, mut deps, env) = instantiate_wrapper(VALID_IBC_DENOM, "eth");
     let response = execute(
         deps.as_mut(),
-        env.clone(),
+        env,
         mock_info("stranger", &[coin(10, VALID_IBC_DENOM)]),
         ExecuteMsg::Mint { receiver: None },
     )
     .unwrap();
-    assert_mint_message_and_attrs(&response, env.contract.address, "stranger", 10);
+    assert_mint_message_and_attrs(&response, "stranger", 10, "eth");
 }
 
 #[test]
@@ -64,27 +64,27 @@ fn with_custom_receiver() {
     let (_result, mut deps, env) = instantiate_wrapper(VALID_IBC_DENOM, "eth");
     let response = execute(
         deps.as_mut(),
-        env.clone(),
+        env,
         mock_info("stranger", &[coin(11, VALID_IBC_DENOM)]),
         ExecuteMsg::Mint {
             receiver: Some("benefitiary".to_string()),
         },
     )
     .unwrap();
-    assert_mint_message_and_attrs(&response, env.contract.address, "benefitiary", 11);
+    assert_mint_message_and_attrs(&response, "benefitiary", 11, "eth");
 }
 
 fn assert_mint_message_and_attrs(
     response: &Response<NeutronMsg>,
-    contract_address: impl Into<String>,
     mint_to_address: &str,
     amount: u128,
+    canonical_denom: impl Into<String>,
 ) {
     assert_eq!(response.messages.len(), 1);
     assert_eq!(
         response.messages[0].msg,
         NeutronMsg::MintTokens {
-            denom: format!("factory/{}/eth", contract_address.into()),
+            denom: canonical_denom.into(),
             amount: Uint128::new(amount),
             mint_to_address: mint_to_address.to_string(),
         }

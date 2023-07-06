@@ -14,7 +14,7 @@ fn corresponds_to_instantiate_params() {
         config_response,
         ConfigResponse {
             bridged_denom: VALID_IBC_DENOM.to_string(),
-            canonical_subdenom: "eth".to_string(),
+            canonical_denom: "eth".to_string(),
         }
     );
 }

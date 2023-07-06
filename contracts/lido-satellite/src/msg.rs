@@ -85,7 +85,7 @@ pub enum ExecuteMsg {
 #[cw_serde]
 pub struct ConfigResponse {
     pub bridged_denom: String,
-    pub canonical_subdenom: String,
+    pub canonical_denom: String,
 }
 
 #[cw_serde]

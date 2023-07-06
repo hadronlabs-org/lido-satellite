@@ -38,11 +38,10 @@ fn incorrect_funds() {
 fn correct_funds() {
     let (_result, mut deps, env) = instantiate_wrapper(VALID_IBC_DENOM, "eth");
     let config = CONFIG.load(deps.as_mut().storage).unwrap();
-    let full_tokenfactory_denom = config.get_full_tokenfactory_denom(&env.contract.address);
     let response = execute(
         deps.as_mut(),
         env,
-        mock_info("stranger", &[coin(10, &full_tokenfactory_denom)]),
+        mock_info("stranger", &[coin(10, &config.canonical_denom)]),
         ExecuteMsg::Burn { receiver: None },
     )
     .unwrap();
@@ -51,7 +50,7 @@ fn correct_funds() {
         &response,
         "stranger",
         10,
-        full_tokenfactory_denom,
+        config.canonical_denom,
         VALID_IBC_DENOM,
     );
 }
@@ -60,13 +59,12 @@ fn correct_funds() {
 fn mixed_funds() {
     let (_result, mut deps, env) = instantiate_wrapper(VALID_IBC_DENOM, "eth");
     let config = CONFIG.load(deps.as_mut().storage).unwrap();
-    let full_tokenfactory_denom = config.get_full_tokenfactory_denom(&env.contract.address);
     let err = execute(
         deps.as_mut(),
         env,
         mock_info(
             "stranger",
-            &[coin(10, full_tokenfactory_denom), coin(20, "ldo")],
+            &[coin(10, config.canonical_denom), coin(20, "ldo")],
         ),
         ExecuteMsg::Burn { receiver: None },
     )
@@ -78,11 +76,10 @@ fn mixed_funds() {
 fn with_custom_receiver() {
     let (_result, mut deps, env) = instantiate_wrapper(VALID_IBC_DENOM, "eth");
     let config = CONFIG.load(deps.as_mut().storage).unwrap();
-    let full_tokenfactory_denom = config.get_full_tokenfactory_denom(&env.contract.address);
     let response = execute(
         deps.as_mut(),
         env,
-        mock_info("stranger", &[coin(12, &full_tokenfactory_denom)]),
+        mock_info("stranger", &[coin(12, &config.canonical_denom)]),
         ExecuteMsg::Burn {
             receiver: Some("benefitiary".to_string()),
         },
@@ -93,7 +90,7 @@ fn with_custom_receiver() {
         &response,
         "benefitiary",
         12,
-        full_tokenfactory_denom,
+        config.canonical_denom,
         VALID_IBC_DENOM,
     );
 }
@@ -102,14 +99,14 @@ fn assert_burn_send_messages_and_attrs(
     response: &Response<NeutronMsg>,
     receiver: &str,
     amount: u128,
-    canonical_subdenom: impl Into<String>,
+    canonical_denom: impl Into<String>,
     bridged_denom: impl Into<String>,
 ) {
     assert_eq!(response.messages.len(), 2);
     assert_eq!(
         response.messages[0].msg,
         NeutronMsg::BurnTokens {
-            denom: canonical_subdenom.into(),
+            denom: canonical_denom.into(),
             amount: Uint128::new(amount),
             burn_from_address: "".to_string(),
         }

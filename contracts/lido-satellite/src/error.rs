@@ -1,10 +1,14 @@
 use cosmwasm_std::{OverflowError, StdError};
+use neutron_sdk::NeutronError;
 use thiserror::Error;
 
 #[derive(Error, Debug, PartialEq)]
 pub enum ContractError {
     #[error("{0}")]
     Std(#[from] StdError),
+
+    #[error("{0}")]
+    NeutronError(#[from] NeutronError),
 
     #[error("{0}")]
     OverflowError(#[from] OverflowError),
@@ -23,6 +27,9 @@ pub enum ContractError {
 
     #[error("extra funds have been supplied")]
     ExtraFunds {},
+
+    #[error("unknown reply id: {id}")]
+    UnknownReplyId { id: u64 },
 }
 
 pub type ContractResult<T> = Result<T, ContractError>;
