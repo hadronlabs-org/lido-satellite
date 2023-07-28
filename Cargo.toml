@@ -1,5 +1,5 @@
 [workspace]
-members = [ "contracts/*" ]
+members = [ "contracts/cosmwasm/*" ]
 
 [workspace.package]
 authors = ["Murad Karammaev <muradkarammaev@gmail.com>"]
