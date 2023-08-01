@@ -1,12 +1,15 @@
 use crate::{
-    contract::execute, msg::ExecuteMsg, tests::helpers::instantiate_wrapper, ContractError,
+    contract::execute,
+    msg::ExecuteMsg,
+    tests::helpers::{instantiate_wrapper, VALID_IBC_DENOM},
+    ContractError,
 };
 use cosmwasm_std::{attr, coin, testing::mock_info, Response, Uint128};
 use neutron_sdk::bindings::msg::NeutronMsg;
 
 #[test]
 fn no_funds() {
-    let (_result, mut deps, env) = instantiate_wrapper("wsteth", "eth");
+    let (_result, mut deps, env) = instantiate_wrapper(VALID_IBC_DENOM, "eth");
     let err = execute(
         deps.as_mut(),
         env,
@@ -19,7 +22,7 @@ fn no_funds() {
 
 #[test]
 fn incorrect_funds() {
-    let (_result, mut deps, env) = instantiate_wrapper("wsteth", "eth");
+    let (_result, mut deps, env) = instantiate_wrapper(VALID_IBC_DENOM, "eth");
     let err = execute(
         deps.as_mut(),
         env,
@@ -32,56 +35,56 @@ fn incorrect_funds() {
 
 #[test]
 fn correct_funds() {
-    let (_result, mut deps, env) = instantiate_wrapper("wsteth", "eth");
+    let (_result, mut deps, env) = instantiate_wrapper(VALID_IBC_DENOM, "eth");
     let response = execute(
         deps.as_mut(),
-        env.clone(),
-        mock_info("stranger", &[coin(10, "wsteth")]),
+        env,
+        mock_info("stranger", &[coin(10, VALID_IBC_DENOM)]),
         ExecuteMsg::Mint { receiver: None },
     )
     .unwrap();
-    assert_mint_message_and_attrs(&response, env.contract.address, "stranger", 10);
+    assert_mint_message_and_attrs(&response, "stranger", 10, "eth");
 }
 
 #[test]
 fn mixed_funds() {
-    let (_result, mut deps, env) = instantiate_wrapper("wsteth", "eth");
-    let response = execute(
+    let (_result, mut deps, env) = instantiate_wrapper(VALID_IBC_DENOM, "eth");
+    let err = execute(
         deps.as_mut(),
-        env.clone(),
-        mock_info("stranger", &[coin(10, "wsteth"), coin(20, "ldo")]),
+        env,
+        mock_info("stranger", &[coin(10, VALID_IBC_DENOM), coin(20, "ldo")]),
         ExecuteMsg::Mint { receiver: None },
     )
-    .unwrap();
-    assert_mint_message_and_attrs(&response, env.contract.address, "stranger", 10);
+    .unwrap_err();
+    assert_eq!(err, ContractError::ExtraFunds {});
 }
 
 #[test]
 fn with_custom_receiver() {
-    let (_result, mut deps, env) = instantiate_wrapper("wsteth", "eth");
+    let (_result, mut deps, env) = instantiate_wrapper(VALID_IBC_DENOM, "eth");
     let response = execute(
         deps.as_mut(),
-        env.clone(),
-        mock_info("stranger", &[coin(11, "wsteth")]),
+        env,
+        mock_info("stranger", &[coin(11, VALID_IBC_DENOM)]),
         ExecuteMsg::Mint {
             receiver: Some("benefitiary".to_string()),
         },
     )
     .unwrap();
-    assert_mint_message_and_attrs(&response, env.contract.address, "benefitiary", 11);
+    assert_mint_message_and_attrs(&response, "benefitiary", 11, "eth");
 }
 
 fn assert_mint_message_and_attrs(
     response: &Response<NeutronMsg>,
-    contract_address: impl Into<String>,
     mint_to_address: &str,
     amount: u128,
+    canonical_denom: impl Into<String>,
 ) {
     assert_eq!(response.messages.len(), 1);
     assert_eq!(
         response.messages[0].msg,
         NeutronMsg::MintTokens {
-            denom: format!("factory/{}/eth", contract_address.into()),
+            denom: canonical_denom.into(),
             amount: Uint128::new(amount),
             mint_to_address: mint_to_address.to_string(),
         }

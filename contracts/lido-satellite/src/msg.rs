@@ -19,11 +19,47 @@ impl InstantiateMsg {
                 kind: "bridged_denom".to_string(),
             });
         }
+        Self::validate_ibc_denom(&self.bridged_denom)?;
+
         if self.canonical_subdenom.is_empty() {
             return Err(ContractError::EmptyDenom {
                 kind: "canonical_subdenom".to_string(),
             });
         }
+        Ok(())
+    }
+
+    fn validate_ibc_denom(denom: &str) -> ContractResult<()> {
+        let invalid_denom = |reason: &str| {
+            Err(ContractError::InvalidIbcDenom {
+                denom: String::from(denom),
+                reason: reason.to_string(),
+            })
+        };
+
+        // Example IBC denom: ibc/584A4A23736884E0C198FD1EE932455A9357A492A7B94324E4A02B5628687831
+        // Length of this string is `len("ibc/") + 64 /* hex encoded 32 bytes hash */ == 68`
+
+        // Step 1: Validate length
+        if denom.len() != 68 {
+            return invalid_denom("expected length of 68 chars");
+        }
+
+        // Step 2: Validate prefix
+        if !denom.starts_with("ibc/") {
+            return invalid_denom("expected prefix 'ibc/'");
+        }
+
+        // Step 3: Validate hash
+        if !denom
+            .chars()
+            .skip(4)
+            // c.is_ascii_hexdigit() could have been used here, but it allows lowercase characters
+            .all(|c| matches!(c, '0'..='9' | 'A'..='F'))
+        {
+            return invalid_denom("invalid denom hash");
+        }
+
         Ok(())
     }
 }
@@ -49,7 +85,7 @@ pub enum ExecuteMsg {
 #[cw_serde]
 pub struct ConfigResponse {
     pub bridged_denom: String,
-    pub canonical_subdenom: String,
+    pub canonical_denom: String,
 }
 
 #[cw_serde]
