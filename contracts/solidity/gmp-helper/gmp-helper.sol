@@ -4,11 +4,14 @@ pragma solidity ^0.8.9;
 import "@axelar-network/axelar-gmp-sdk-solidity/contracts/interfaces/IAxelarGateway.sol";
 import "@axelar-network/axelar-gmp-sdk-solidity/contracts/interfaces/IAxelarGasService.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Permit.sol";
+
+interface IWSTETH is IERC20, IERC20Permit {}
 
 contract GmpHelper {
     IAxelarGasService public immutable gasService;
     IAxelarGateway public immutable gateway;
-    IERC20 public immutable wstEth;
+    IWSTETH public immutable wstEth;
     string public lidoSatellite;
 
     string public constant DESTINATION_CHAIN = "neutron";
@@ -22,7 +25,7 @@ contract GmpHelper {
     ) {
         gasService = IAxelarGasService(axelarGasReceiver_);
         gateway = IAxelarGateway(axelarGateway_);
-        wstEth = IERC20(wstEth_);
+        wstEth = IWSTETH(wstEth_);
         lidoSatellite = lidoSatellite_;
     }
 
@@ -30,6 +33,25 @@ contract GmpHelper {
         string calldata receiver,
         uint256 amount
     ) external payable {
+        _send(receiver, amount);
+    }
+
+    function sendWithPermit(
+        string calldata receiver,
+        uint256 amount,
+        uint256 deadline,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external payable {
+        wstEth.permit(msg.sender, address(this), amount, deadline, v, r, s);
+        _send(receiver, amount);
+    }
+
+    function _send(
+        string calldata receiver,
+        uint256 amount
+    ) internal {
         // 1. withdraw wstETH from caller and approve it for Axelar Gateway.
         // Gateway will attempt to transfer funds from address(this), hence we
         // are forced to withdraw them from caller account first.

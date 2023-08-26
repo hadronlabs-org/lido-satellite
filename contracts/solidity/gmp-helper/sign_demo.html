@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <title>Sign demo</title>
+
+    <style>
+        #results {
+            margin-top: 1rem;
+        }
+
+        #results p {
+            margin: unset;
+        }
+    </style>
+</head>
+
+<body>
+    <label for="contract">GMP helper contract address, upload it on Goerli:</label><br>
+    <input type="text" id="contract" name="contract" size="40" value="0xC55B33F32b435BA1B20508F758870076F778889D"/><br><br>
+    <label for="amount">Amount of wstETH-wei to transfer:</label><br>
+    <input type="text" id="amount" name="amount" size="20" value="42"/><br><br>
+    <label for="nonce">Nonce, you can query it directy from wstETH contract for your account:</label><br>
+    <input type="text" id="nonce" name="nonce" size="10" value="0"/><br><br>
+    <button onclick="sign()">Sign demo</button>
+    <div id="results"></div>
+    <script>
+        async function sign() {
+            const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+
+            const owner = accounts[0];
+            const wstEth = "0x6320cD32aA674d2898A68ec82e869385Fc5f7E2f";
+            const wstEthName = "Wrapped liquid staked Ether 2.0";
+            const goerliChainId = "5";
+            const deadline = Math.floor(Date.now() / 1000) + 3600;
+            const spender = document.getElementById("contract").value;
+            const amount = document.getElementById("amount").value;
+            const nonce = document.getElementById("nonce").value;
+
+            const msgParams = JSON.stringify({
+                types: {
+                    EIP712Domain: [
+                        {
+                            name: "name",
+                            type: "string"
+                        },
+                        {
+                            name: "version",
+                            type: "string"
+                        },
+                        {
+                            name: "chainId",
+                            type: "uint256"
+                        },
+                        {
+                            name: "verifyingContract",
+                            type: "address"
+                        }
+                    ],
+                    Permit: [
+                        {
+                            name: "owner",
+                            type: "address"
+                        },
+                        {
+                            name: "spender",
+                            type: "address"
+                        },
+                        {
+                            name: "value",
+                            type: "uint256"
+                        },
+                        {
+                            name: "nonce",
+                            type: "uint256"
+                        },
+                        {
+                            name: "deadline",
+                            type: "uint256"
+                        }
+                    ],
+                },
+                primaryType: "Permit",
+                domain: {
+                    name: wstEthName,
+                    version: "1",
+                    chainId: goerliChainId,
+                    verifyingContract: wstEth,
+                },
+                message: {
+                    owner,
+                    spender,
+                    value: amount,
+                    nonce,
+                    deadline,
+                }
+            });
+
+            const results = document.getElementById("results");
+            let child = results.lastElementChild;
+            while (child) {
+                results.removeChild(child);
+                child = results.lastElementChild;
+            }
+
+            const userText = [];
+            const result = await window.ethereum.request({
+                method: 'eth_signTypedData_v4',
+                params: [owner, msgParams],
+                from: owner,
+            });
+            const r = result.substring(2, 2 + 64);
+            const s = result.substring(2 + 64, 2 + 64 + 64);
+            const v = parseInt(result.substring(2 + 64 + 64, 2 + 64 + 64 + 2), 16);
+
+            userText.push("receiver = <any address on Neutron>");
+            userText.push(`amount = ${amount}`);
+            userText.push(`deadline = ${deadline}`);
+            userText.push(`v = ${v}`);
+            userText.push(`r = 0x${r}`);
+            userText.push(`s = 0x${s}`);
+
+            for (const text of userText) {
+                const p = document.createElement("p");
+                p.appendChild(document.createTextNode(text));
+                results.appendChild(p);
+            }
+        }
+    </script>
+</body>
+
+</html>

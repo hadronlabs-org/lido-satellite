@@ -1,0 +1,1 @@
+- [ ] best practice would be to check that our signed DOMAIN_SEPARATOR equals to contract's one (it can be queried)
