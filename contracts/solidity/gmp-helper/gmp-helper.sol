@@ -8,6 +8,17 @@ import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Permit.sol";
 
 interface IWSTETH is IERC20, IERC20Permit {}
 
+/// @title GMP helper which makes it easier to call Lido Satellite on Neutron
+/// @author Murad Karammaev
+/// @notice Default flow (without a GMP Helper) is to:
+///           1. tx approve() on wstETH contract
+///           2. tx payNativeGasForContractCallWithToken() on Axelar Gas Service
+///           3. tx callContractWithToken() on Axelar gateway
+///         This contract simplifies it to:
+///           1. tx approve() on wstETH contract
+///           2. tx send() on GMP Helper
+///         It is also possible to simplify it further if user wallet supports EIP-712 signing:
+///           1. tx sendWithPermit() on GMP Helper
 contract GmpHelper {
     IAxelarGasService public immutable gasService;
     IAxelarGateway public immutable gateway;
@@ -17,6 +28,11 @@ contract GmpHelper {
     string public constant DESTINATION_CHAIN = "neutron";
     string public constant WSTETH_SYMBOL = "wstETH";
 
+    /// @notice Construct GMP Helper
+    /// @param axelarGateway_ Address of Axelar Gateway contract
+    /// @param axelarGasReceiver_ Address of Axelar Gas Service contract
+    /// @param wstEth_ Address of Wrapped Liquid Staked Ether contract
+    /// @param lidoSatellite_ Address of Lido Satellite contract on Neutron
     constructor(
         address axelarGateway_,
         address axelarGasReceiver_,
@@ -29,6 +45,11 @@ contract GmpHelper {
         lidoSatellite = lidoSatellite_;
     }
 
+    /// @notice Send `amount` of wstETH to `receiver` on Neutron.
+    ///         Requires allowance on wstETH contract.
+    ///         Requires gas fee in ETH.
+    /// @param receiver Address on Neutron which shall receive canonical wstETH
+    /// @param amount Amount of wstETH-wei to send to `receiver`
     function send(
         string calldata receiver,
         uint256 amount
@@ -36,6 +57,14 @@ contract GmpHelper {
         _send(receiver, amount);
     }
 
+    /// @notice Send `amount` of wstETH to `receiver` on Neutron, using EIP-2612 permit.
+    ///         Requires gas fee in ETH.
+    /// @param receiver Address on Neutron which shall receive canonical wstETH
+    /// @param amount Amount of wstETH-wei to send to `receiver`
+    /// @param deadline EIP-2612 permit signature deadline
+    /// @param v Value `v` of EIP-2612 permit signature
+    /// @param r Value `r` of EIP-2612 permit signature
+    /// @param s Value `s` of EIP-2612 permit signature
     function sendWithPermit(
         string calldata receiver,
         uint256 amount,
