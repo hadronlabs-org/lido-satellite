@@ -1,0 +1,21 @@
+{
+  "name": "lido-satellite",
+  "version": "1.0.0",
+  "description": "Lido Satellite",
+  "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hadronlabs-org/lido-satellite.git"
+  },
+  "author": "Hadron Labs",
+  "license": "Apache-2.0",
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^3.0.0",
+    "hardhat": "^2.17.1",
+    "solhint": "^3.6.2"
+  },
+  "dependencies": {
+    "@axelar-network/axelar-gmp-sdk-solidity": "^5.1.0",
+    "@openzeppelin/contracts": "^4.9.3"
+  }
+}

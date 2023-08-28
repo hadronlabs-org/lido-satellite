@@ -1,10 +1,10 @@
-// SPDX-License-Identifier: Apache-2
-pragma solidity ^0.8.9;
+// SPDX-License-Identifier: Apache-2.0
+pragma solidity 0.8.19;
 
-import "@axelar-network/axelar-gmp-sdk-solidity/contracts/interfaces/IAxelarGateway.sol";
-import "@axelar-network/axelar-gmp-sdk-solidity/contracts/interfaces/IAxelarGasService.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Permit.sol";
+import { IAxelarGateway } from "@axelar-network/axelar-gmp-sdk-solidity/contracts/interfaces/IAxelarGateway.sol";
+import { IAxelarGasService } from "@axelar-network/axelar-gmp-sdk-solidity/contracts/interfaces/IAxelarGasService.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { IERC20Permit } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Permit.sol";
 
 interface IWSTETH is IERC20, IERC20Permit {}
 
@@ -20,29 +20,28 @@ interface IWSTETH is IERC20, IERC20Permit {}
 ///         It is also possible to simplify it further if user wallet supports EIP-712 signing:
 ///           1. tx sendWithPermit() on GMP Helper
 contract GmpHelper {
-    IAxelarGasService public immutable gasService;
-    IAxelarGateway public immutable gateway;
-    IWSTETH public immutable wstEth;
-    string public lidoSatellite;
-
+    IAxelarGasService public immutable GAS_SERVICE;
+    IAxelarGateway public immutable GATEWAY;
+    IWSTETH public immutable WST_ETH;
+    string public satellite;
     string public constant DESTINATION_CHAIN = "neutron";
     string public constant WSTETH_SYMBOL = "wstETH";
 
     /// @notice Construct GMP Helper
-    /// @param axelarGateway_ Address of Axelar Gateway contract
-    /// @param axelarGasReceiver_ Address of Axelar Gas Service contract
-    /// @param wstEth_ Address of Wrapped Liquid Staked Ether contract
-    /// @param lidoSatellite_ Address of Lido Satellite contract on Neutron
+    /// @param axelarGateway Address of Axelar Gateway contract
+    /// @param axelarGasReceiver Address of Axelar Gas Service contract
+    /// @param wstEth Address of Wrapped Liquid Staked Ether contract
+    /// @param lidoSatellite Address of Lido Satellite contract on Neutron
     constructor(
-        address axelarGateway_,
-        address axelarGasReceiver_,
-        address wstEth_,
-        string memory lidoSatellite_
+        address axelarGateway,
+        address axelarGasReceiver,
+        address wstEth,
+        string memory lidoSatellite
     ) {
-        gasService = IAxelarGasService(axelarGasReceiver_);
-        gateway = IAxelarGateway(axelarGateway_);
-        wstEth = IWSTETH(wstEth_);
-        lidoSatellite = lidoSatellite_;
+        GAS_SERVICE = IAxelarGasService(axelarGasReceiver);
+        GATEWAY = IAxelarGateway(axelarGateway);
+        WST_ETH = IWSTETH(wstEth);
+        satellite = lidoSatellite;
     }
 
     /// @notice Send `amount` of wstETH to `receiver` on Neutron.
@@ -73,7 +72,7 @@ contract GmpHelper {
         bytes32 r,
         bytes32 s
     ) external payable {
-        wstEth.permit(msg.sender, address(this), amount, deadline, v, r, s);
+        WST_ETH.permit(msg.sender, address(this), amount, deadline, v, r, s);
         _send(receiver, amount);
     }
 
@@ -84,17 +83,17 @@ contract GmpHelper {
         // 1. withdraw wstETH from caller and approve it for Axelar Gateway.
         // Gateway will attempt to transfer funds from address(this), hence we
         // are forced to withdraw them from caller account first.
-        wstEth.transferFrom(msg.sender, address(this), amount);
-        wstEth.approve(address(gateway), amount);
+        WST_ETH.transferFrom(msg.sender, address(this), amount);
+        WST_ETH.approve(address(GATEWAY), amount);
 
         // 2. Generate GMP payload
         bytes memory payload = _encodeGmpPayload(receiver);
 
         // 3. Pay for gas
-        gasService.payNativeGasForContractCallWithToken{value: msg.value}(
+        GAS_SERVICE.payNativeGasForContractCallWithToken{value: msg.value}(
             address(this),
             DESTINATION_CHAIN,
-            lidoSatellite,
+            satellite,
             payload,
             WSTETH_SYMBOL,
             amount,
@@ -102,9 +101,9 @@ contract GmpHelper {
         );
 
         // 4. Make GMP call
-        gateway.callContractWithToken(
+        GATEWAY.callContractWithToken(
             DESTINATION_CHAIN,
-            lidoSatellite,
+            satellite,
             payload,
             WSTETH_SYMBOL,
             amount
