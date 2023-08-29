@@ -67,6 +67,5 @@ There are several arguments in this contract's constructor:
 | `axelarGateway`     | Address of Axelar Gateway contract, obtained from [here](https://docs.axelar.dev/resources/mainnet)      | `0xe432150cce91c13a887f7D836923d5597adD8E31` | `0x4F4495243837681061C4743b74B3eEdf548D56A5` |
 | `axelarGasReceiver` | Address of Axelar Gas Service contract, obtained from  [here](https://docs.axelar.dev/resources/mainnet) | `0xbE406F0189A0B4cf3A05C286473D23791Dd44Cc6` | `0x2d5d7d31F671F86C782533cc367F14109a082712` |
 | `wstEth`            | Address of wstETH contract, obtained from [here](https://docs.lido.fi/deployed-contracts/)               | `0x6320cD32aA674d2898A68ec82e869385Fc5f7E2f` | `0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0` |
-| `lidoSatellite`     | Address of Lido Satellite contract deployed on Neutron                                                   | N/A                                          | N/A                                          |
 
 In order to deploy this contract I recommend using [Remix IDE](https://remix.ethereum.org/).

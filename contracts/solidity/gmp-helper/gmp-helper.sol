@@ -23,7 +23,8 @@ contract GmpHelper {
     IAxelarGasService public immutable GAS_SERVICE;
     IAxelarGateway public immutable GATEWAY;
     IWSTETH public immutable WST_ETH;
-    string public satellite;
+    // Address of Lido Satellite contract on Neutron, replace it with a real address before deploying
+    string public constant LIDO_SATELLITE = "neutron1aghwa8gcetlqsg46ha3esu8rqzy4k5z76v5r440ghneejzx8mwassk3x2s";
     string public constant DESTINATION_CHAIN = "neutron";
     string public constant WSTETH_SYMBOL = "wstETH";
 
@@ -31,17 +32,14 @@ contract GmpHelper {
     /// @param axelarGateway Address of Axelar Gateway contract
     /// @param axelarGasReceiver Address of Axelar Gas Service contract
     /// @param wstEth Address of Wrapped Liquid Staked Ether contract
-    /// @param lidoSatellite Address of Lido Satellite contract on Neutron
     constructor(
         address axelarGateway,
         address axelarGasReceiver,
-        address wstEth,
-        string memory lidoSatellite
+        address wstEth
     ) {
         GAS_SERVICE = IAxelarGasService(axelarGasReceiver);
         GATEWAY = IAxelarGateway(axelarGateway);
         WST_ETH = IWSTETH(wstEth);
-        satellite = lidoSatellite;
     }
 
     /// @notice Send `amount` of wstETH to `receiver` on Neutron.
@@ -93,7 +91,7 @@ contract GmpHelper {
         GAS_SERVICE.payNativeGasForContractCallWithToken{value: msg.value}(
             address(this),
             DESTINATION_CHAIN,
-            satellite,
+            LIDO_SATELLITE,
             payload,
             WSTETH_SYMBOL,
             amount,
@@ -103,7 +101,7 @@ contract GmpHelper {
         // 4. Make GMP call
         GATEWAY.callContractWithToken(
             DESTINATION_CHAIN,
-            satellite,
+            LIDO_SATELLITE,
             payload,
             WSTETH_SYMBOL,
             amount
