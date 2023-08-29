@@ -20,3 +20,9 @@ compile:
 	@scripts/build_release.sh
 
 build: schema clippy fmt test compile check_contracts
+
+lint-sol:
+	@npx solhint contracts/solidity/gmp-helper/gmp-helper.sol
+
+build-sol:
+	@npx hardhat compile
