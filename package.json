@@ -16,7 +16,6 @@
   },
   "dependencies": {
     "@axelar-network/axelar-gmp-sdk-solidity": "^5.1.0",
-    "@openzeppelin/contracts": "^4.9.3",
-    "@openzeppelin/contracts-v4.4": "npm:@openzeppelin/contracts@4.4.1"
+    "@openzeppelin/contracts": "^4.9.3"
   }
 }

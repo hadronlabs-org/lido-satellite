@@ -3,9 +3,9 @@
 
 pragma solidity 0.8.19;
 
-import {Address} from "@openzeppelin/contracts-v4.4/utils/Address.sol";
-import {StorageSlot} from "@openzeppelin/contracts-v4.4/utils/StorageSlot.sol";
-import {ERC1967Proxy} from "@openzeppelin/contracts-v4.4/proxy/ERC1967/ERC1967Proxy.sol";
+import {Address} from "@openzeppelin/contracts/utils/Address.sol";
+import {StorageSlot} from "@openzeppelin/contracts/utils/StorageSlot.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 /// @notice An ossifiable proxy contract. Extends the ERC1967Proxy contract by
 ///     adding admin functionality
