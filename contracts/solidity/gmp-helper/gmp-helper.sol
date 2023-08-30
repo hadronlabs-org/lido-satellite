@@ -1,4 +1,6 @@
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: Hadron Labs
+// SPDX-License-Identifier: GPL-3.0
+
 pragma solidity 0.8.19;
 
 import { IAxelarGateway } from "@axelar-network/axelar-gmp-sdk-solidity/contracts/interfaces/IAxelarGateway.sol";
