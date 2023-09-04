@@ -49,6 +49,7 @@ fn correct_funds() {
     assert_burn_send_messages_and_attrs(
         &response,
         "stranger",
+        "stranger",
         10,
         config.canonical_denom,
         VALID_IBC_DENOM,
@@ -88,6 +89,7 @@ fn with_custom_receiver() {
 
     assert_burn_send_messages_and_attrs(
         &response,
+        "stranger",
         "benefitiary",
         12,
         config.canonical_denom,
@@ -97,6 +99,7 @@ fn with_custom_receiver() {
 
 fn assert_burn_send_messages_and_attrs(
     response: &Response<NeutronMsg>,
+    sender: &str,
     receiver: &str,
     amount: u128,
     canonical_denom: impl Into<String>,
@@ -125,7 +128,8 @@ fn assert_burn_send_messages_and_attrs(
         vec![
             attr("action", "burn"),
             attr("amount", amount.to_string()),
-            attr("from", receiver)
+            attr("sender", sender),
+            attr("receiver", receiver)
         ]
     )
 }

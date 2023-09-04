@@ -9,6 +9,7 @@ pub(crate) fn execute_mint(
     receiver: Option<String>,
 ) -> ContractResult<Response<NeutronMsg>> {
     let config = CONFIG.load(deps.storage)?;
+    let sender = info.sender.to_string();
     let receiver = receiver.map_or(Ok(info.sender), |addr| deps.api.addr_validate(&addr))?;
 
     let bridged_funds =
@@ -21,7 +22,8 @@ pub(crate) fn execute_mint(
     Ok(Response::new().add_message(mint_msg).add_attributes([
         attr("action", "mint"),
         attr("amount", bridged_funds.amount),
-        attr("to", receiver),
+        attr("sender", sender),
+        attr("receiver", receiver),
     ]))
 }
 
@@ -32,6 +34,7 @@ pub(crate) fn execute_burn(
     receiver: Option<String>,
 ) -> ContractResult<Response<NeutronMsg>> {
     let config = CONFIG.load(deps.storage)?;
+    let sender = info.sender.to_string();
     let receiver = receiver.map_or(Ok(info.sender), |addr| deps.api.addr_validate(&addr))?;
 
     let amount_to_burn = find_denom(&info.funds, &config.canonical_denom)?
@@ -51,7 +54,8 @@ pub(crate) fn execute_burn(
         .add_attributes([
             attr("action", "burn"),
             attr("amount", amount_to_burn),
-            attr("from", receiver),
+            attr("sender", sender),
+            attr("receiver", receiver),
         ]))
 }
 

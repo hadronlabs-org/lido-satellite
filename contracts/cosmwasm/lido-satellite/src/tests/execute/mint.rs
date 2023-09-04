@@ -43,7 +43,7 @@ fn correct_funds() {
         ExecuteMsg::Mint { receiver: None },
     )
     .unwrap();
-    assert_mint_message_and_attrs(&response, "stranger", 10, "eth");
+    assert_mint_message_and_attrs(&response, "stranger", "stranger", 10, "eth");
 }
 
 #[test]
@@ -71,11 +71,12 @@ fn with_custom_receiver() {
         },
     )
     .unwrap();
-    assert_mint_message_and_attrs(&response, "benefitiary", 11, "eth");
+    assert_mint_message_and_attrs(&response, "stranger", "benefitiary", 11, "eth");
 }
 
 fn assert_mint_message_and_attrs(
     response: &Response<NeutronMsg>,
+    sender: &str,
     mint_to_address: &str,
     amount: u128,
     canonical_denom: impl Into<String>,
@@ -95,7 +96,8 @@ fn assert_mint_message_and_attrs(
         vec![
             attr("action", "mint"),
             attr("amount", amount.to_string()),
-            attr("to", mint_to_address.to_string())
+            attr("sender", sender),
+            attr("receiver", mint_to_address)
         ]
     )
 }
