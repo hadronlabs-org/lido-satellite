@@ -6,29 +6,32 @@
     <title>Sign demo</title>
 
     <style>
-        #results {
+        .results {
             margin-top: 1rem;
         }
 
-        #results p {
+        .results p, .results a {
             margin: unset;
         }
     </style>
 </head>
 
 <body>
+    <script src="https://cdn.ethers.io/lib/ethers-5.7.umd.min.js" type="application/javascript"></script>
+
+    <h1>EIP-712</h1>
+    <h4>This demo describes how to sign structured data using EIP-712, and then apply this knowledge to create an EIP-2612 signature</h4>
     <label for="contract">GMP helper contract address, upload it on Goerli:</label><br>
-    <input type="text" id="contract" name="contract" size="40" value="0xC55B33F32b435BA1B20508F758870076F778889D"/><br><br>
+    <input type="text" id="contract" name="contract" size="40" value="0xDC80000b002048Cf49420e1ED1Ae985Bc55994E6"/><br><br>
     <label for="amount">Amount of wstETH-wei to transfer:</label><br>
     <input type="text" id="amount" name="amount" size="20" value="42"/><br><br>
     <label for="nonce">Nonce, you can query it directy from wstETH contract for your account:</label><br>
     <input type="text" id="nonce" name="nonce" size="10" value="0"/><br><br>
     <button onclick="sign()">Sign demo</button>
-    <div id="results"></div>
+    <div class="results" id="results"></div>
     <script>
         async function sign() {
             const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-
             const owner = accounts[0];
             const wstEth = "0x6320cD32aA674d2898A68ec82e869385Fc5f7E2f";
             const wstEthName = "Wrapped liquid staked Ether 2.0";
@@ -126,6 +129,141 @@
                 p.appendChild(document.createTextNode(text));
                 results.appendChild(p);
             }
+        }
+    </script>
+
+    <hr>
+    <h1>Burn ETH</h1>
+    <h4>This demo describes how to burn ETH via sending it to zero address</h4>
+    <label for="burn_amount">Amount of ETH-wei to burn:</label><br>
+    <input type="text" id="burn_amount" name="burn_amount" size="20" value="0x2a"/><br><br>
+    <button onclick="burn()">Burn demo</button>
+    <div class="results" id="burn_results"></div>
+    <script>
+        async function burn() {
+            const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+            const owner = accounts[0];
+            const burnAmount = document.getElementById("burn_amount").value;
+
+            const burnResults = document.getElementById("burn_results");
+            let child = burnResults.lastElementChild;
+            while (child) {
+                burnResults.removeChild(child);
+                child = burnResults.lastElementChild;
+            }
+
+            const txhash = await window.ethereum.request({
+                method: 'eth_sendTransaction',
+                params: [
+                    {
+                        from: owner,
+                        to: "0x0000000000000000000000000000000000000000",
+                        value: burnAmount,
+                    }
+                ]
+            });
+
+            const a = document.createElement("a");
+            a.textContent = `${txhash} on Görli Etherscan`;
+            a.href = `https://goerli.etherscan.io/tx/${txhash}`;
+            burnResults.appendChild(a);
+        }
+    </script>
+
+    <hr>
+    <h1>Query smart contract</h1>
+    <h4>This demo describes how to query a smart contract, as an example reading nonce from wstETH</h4>
+    <button onclick="query()">Query demo</button>
+    <div class="results" id="query_results"></div>
+    <script>
+        async function query() {
+            const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+            const owner = accounts[0];
+            const provider = new ethers.providers.Web3Provider(window.ethereum);
+            const signer = provider.getSigner(owner);
+            const abi = [
+                "function nonces(address _owner) public view returns (uint256)"
+            ];
+            const wstEthContract = new ethers.Contract("0x6320cD32aA674d2898A68ec82e869385Fc5f7E2f", abi, signer);
+
+            const queryResults = document.getElementById("query_results");
+            let child = queryResults.lastElementChild;
+            while (child) {
+                queryResults.removeChild(child);
+                child = queryResults.lastElementChild;
+            }
+
+            const nonce = await wstEthContract.nonces(owner);
+
+            const p = document.createElement("p");
+            p.appendChild(document.createTextNode(`${owner} has a following nonce on wstETH: ${nonce.toString()}`));
+            queryResults.appendChild(p);
+        }
+    </script>
+
+    <hr>
+    <h1>Execute smart contract</h1>
+    <h4>This demo described how to execute a smart contract, as an example setting allowance on wstETH</h4>
+    <label for="execute_amount">Amount of wstETH-wei to transfer:</label><br>
+    <input type="text" id="execute_amount" name="execute_amount" size="20" value="200"/><br><br>
+    <button onclick="execute_approve()">Execute demo: set allowance</button>
+    <button onclick="execute_allowance()">Execute demo: get allowance</button>
+    <div class="results" id="execute_results"></div>
+    <script>
+        async function execute_approve() {
+            const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+            const owner = accounts[0];
+            const amount = document.getElementById("execute_amount").value;
+            const spender = "0xDC80000b002048Cf49420e1ED1Ae985Bc55994E6";
+            const provider = new ethers.providers.Web3Provider(window.ethereum);
+            const signer = provider.getSigner(owner);
+            const abi = [
+                "function approve(address _spender, uint256 _amount) public returns (bool success)"
+            ];
+            const wstEthContract = new ethers.Contract("0x6320cD32aA674d2898A68ec82e869385Fc5f7E2f", abi, signer);
+
+            const executeResults = document.getElementById("execute_results");
+            let child = executeResults.lastElementChild;
+            while (child) {
+                executeResults.removeChild(child);
+                child = executeResults.lastElementChild;
+            }
+
+            const approveTxUnsigned = await wstEthContract.populateTransaction.approve(spender, amount);
+            const txhash = await window.ethereum.request({
+                method: 'eth_sendTransaction',
+                params: [approveTxUnsigned],
+            });
+
+            const a = document.createElement("a");
+            a.textContent = `${txhash} on Görli Etherscan`;
+            a.href = `https://goerli.etherscan.io/tx/${txhash}`;
+            executeResults.appendChild(a);
+        }
+
+        async function execute_allowance() {
+            const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+            const owner = accounts[0];
+            const spender = "0xDC80000b002048Cf49420e1ED1Ae985Bc55994E6";
+            const provider = new ethers.providers.Web3Provider(window.ethereum);
+            const signer = provider.getSigner(owner);
+            const abi = [
+                "function allowance(address _owner, address _apender) public view returns (uint256)",
+            ];
+            const wstEthContract = new ethers.Contract("0x6320cD32aA674d2898A68ec82e869385Fc5f7E2f", abi, signer);
+
+            const executeResults = document.getElementById("execute_results");
+            let child = executeResults.lastElementChild;
+            while (child) {
+                executeResults.removeChild(child);
+                child = executeResults.lastElementChild;
+            }
+
+            const allowance = await wstEthContract.allowance(owner, spender);
+
+            const p = document.createElement("p");
+            p.appendChild(document.createTextNode(`${owner} has a following allowance for ${spender} on wstETH: ${allowance.toString()}`));
+            executeResults.appendChild(p);
         }
     </script>
 </body>
