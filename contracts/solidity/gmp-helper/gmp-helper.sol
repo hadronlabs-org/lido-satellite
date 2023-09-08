@@ -113,6 +113,14 @@ contract GmpHelper {
     function _encodeGmpPayload(
         string memory targetReceiver
     ) internal pure returns (bytes memory) {
+        require(bytes(targetReceiver).length > 8, "receiver address is too short"); // len("neutron1") == 8
+        require(bytes(targetReceiver).length < 255, "receiver address is too long");
+
+        bytes memory prefix = bytes("neutron1");
+        for (uint8 i = 0; i < prefix.length; i++) {
+            require(bytes(targetReceiver)[i] == prefix[i], "receiver: incorrect prefix");
+        }
+
         bytes memory argValues = abi.encode(
             targetReceiver
         );
