@@ -26,3 +26,6 @@ lint-sol:
 
 build-sol:
 	@npx hardhat compile
+
+test-sol: build-sol
+	@npx hardhat test
