@@ -49,11 +49,14 @@ contract GmpHelper {
     ///         Requires gas fee in ETH.
     /// @param receiver Address on Neutron which shall receive canonical wstETH
     /// @param amount Amount of wstETH-wei to send to `receiver`
+    /// @param gasRefundAddress Address which receives ETH refunds from Axelar,
+    ///        use 0 to default to msg.sender
     function send(
         string calldata receiver,
-        uint256 amount
+        uint256 amount,
+        address gasRefundAddress
     ) external payable {
-        _send(receiver, amount);
+        _send(receiver, amount, gasRefundAddress);
     }
 
     /// @notice Send `amount` of wstETH to `receiver` on Neutron, using EIP-2612 permit.
@@ -64,21 +67,25 @@ contract GmpHelper {
     /// @param v Value `v` of EIP-2612 permit signature
     /// @param r Value `r` of EIP-2612 permit signature
     /// @param s Value `s` of EIP-2612 permit signature
+    /// @param gasRefundAddress Address which receives ETH refunds from Axelar,
+    ///        use 0 to default to msg.sender
     function sendWithPermit(
         string calldata receiver,
         uint256 amount,
         uint256 deadline,
         uint8 v,
         bytes32 r,
-        bytes32 s
+        bytes32 s,
+        address gasRefundAddress
     ) external payable {
         WST_ETH.permit(msg.sender, address(this), amount, deadline, v, r, s);
-        _send(receiver, amount);
+        _send(receiver, amount, gasRefundAddress);
     }
 
     function _send(
         string calldata receiver,
-        uint256 amount
+        uint256 amount,
+        address gasRefundAddress
     ) internal {
         // 1. withdraw wstETH from caller and approve it for Axelar Gateway.
         // Gateway will attempt to transfer funds from address(this), hence we
@@ -97,7 +104,7 @@ contract GmpHelper {
             payload,
             WSTETH_SYMBOL,
             amount,
-            msg.sender
+            gasRefundAddress == address(0) ? msg.sender : gasRefundAddress
         );
 
         // 4. Make GMP call
