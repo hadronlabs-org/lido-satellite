@@ -5,7 +5,7 @@ pragma solidity 0.8.19;
 
 contract AxelarGasServiceMock {
     address public gmpHelper;
-    string public constant destinationAddress = "neutron1aghwa8gcetlqsg46ha3esu8rqzy4k5z76v5r440ghneejzx8mwassk3x2s";
+    string public constant destinationAddress = "neutron1ug740qrkquxzrk2hh29qrlx3sktkfml3je7juusc2te7xmvsscns0n2wry";
     address public constant hardhatSignerZero = 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266;
 
     constructor() {}

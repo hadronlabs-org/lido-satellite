@@ -14,7 +14,7 @@ describe("GMP Helper", function () {
         expect(await gmpHelper.DESTINATION_CHAIN()).to.equal("neutron");
         expect(await gmpHelper.GAS_SERVICE()).to.equal("0x0000000000000000000000000000000000000002");
         expect(await gmpHelper.GATEWAY()).to.equal("0x0000000000000000000000000000000000000001");
-        expect(await gmpHelper.LIDO_SATELLITE()).to.equal("neutron1aghwa8gcetlqsg46ha3esu8rqzy4k5z76v5r440ghneejzx8mwassk3x2s");
+        expect(await gmpHelper.LIDO_SATELLITE()).to.equal("neutron1ug740qrkquxzrk2hh29qrlx3sktkfml3je7juusc2te7xmvsscns0n2wry");
         expect(await gmpHelper.WST_ETH()).to.equal("0x0000000000000000000000000000000000000003");
         expect(await gmpHelper.WSTETH_SYMBOL()).to.equal("wstETH");
     });

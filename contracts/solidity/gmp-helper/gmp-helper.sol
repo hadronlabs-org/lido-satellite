@@ -26,7 +26,7 @@ contract GmpHelper {
     IAxelarGateway public immutable GATEWAY;
     IWSTETH public immutable WST_ETH;
     // Address of Lido Satellite contract on Neutron, replace it with a real address before deploying
-    string public constant LIDO_SATELLITE = "neutron1aghwa8gcetlqsg46ha3esu8rqzy4k5z76v5r440ghneejzx8mwassk3x2s";
+    string public constant LIDO_SATELLITE = "neutron1ug740qrkquxzrk2hh29qrlx3sktkfml3je7juusc2te7xmvsscns0n2wry";
     string public constant DESTINATION_CHAIN = "neutron";
     string public constant WSTETH_SYMBOL = "wstETH";
 
