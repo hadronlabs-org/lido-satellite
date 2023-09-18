@@ -1,5 +1,7 @@
 use crate::{
-    execute::execute_wrap_and_send,
+    execute::{
+        execute_set_ibc_fee_denom, execute_set_owner, execute_withdraw_funds, execute_wrap_and_send,
+    },
     msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg},
     query::query_config,
     state::{Config, CONFIG},
@@ -22,9 +24,14 @@ pub fn instantiate(
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
     let lido_satellite = deps.api.addr_validate(&msg.lido_satellite)?;
+    let owner = msg
+        .owner
+        .map(|addr| deps.api.addr_validate(&addr))
+        .transpose()?;
     let config = Config {
         lido_satellite,
         ibc_fee_denom: msg.ibc_fee_denom,
+        owner,
     };
     CONFIG.save(deps.storage, &config)?;
 
@@ -44,6 +51,13 @@ pub fn execute(
             source_channel,
             receiver,
         } => execute_wrap_and_send(deps, env, info, source_port, source_channel, receiver),
+        ExecuteMsg::SetOwner { new_owner } => execute_set_owner(deps, env, info, new_owner),
+        ExecuteMsg::SetIbcFeeDenom { new_ibc_fee_denom } => {
+            execute_set_ibc_fee_denom(deps, env, info, new_ibc_fee_denom)
+        }
+        ExecuteMsg::WithdrawFunds { funds, receiver } => {
+            execute_withdraw_funds(deps, env, info, funds, receiver)
+        }
     }
 }
 

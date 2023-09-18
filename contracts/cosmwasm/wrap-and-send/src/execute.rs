@@ -1,6 +1,9 @@
-use crate::{state::CONFIG, ContractResult};
+use crate::{
+    state::{Config, CONFIG},
+    ContractError, ContractResult,
+};
 use cosmwasm_std::{
-    attr, coin, to_binary, CosmosMsg, DepsMut, Env, MessageInfo, Response, WasmMsg,
+    attr, coin, to_binary, BankMsg, Coin, CosmosMsg, DepsMut, Env, MessageInfo, Response, WasmMsg,
 };
 use lido_satellite::{
     error::ContractError as LidoSatelliteContractError, execute::find_denom,
@@ -77,4 +80,83 @@ pub(crate) fn execute_wrap_and_send(
             attr("source_port", source_port),
             attr("source_channel", source_channel),
         ]))
+}
+
+pub(crate) fn execute_set_owner(
+    deps: DepsMut<NeutronQuery>,
+    _env: Env,
+    info: MessageInfo,
+    new_owner: Option<String>,
+) -> ContractResult<Response<NeutronMsg>> {
+    let mut config = CONFIG.load(deps.storage)?;
+    check_owner(&config, &info)?;
+
+    let new_owner = new_owner
+        .map(|addr| deps.api.addr_validate(&addr))
+        .transpose()?;
+    config.owner = new_owner;
+    CONFIG.save(deps.storage, &config)?;
+
+    let attributes = if let Some(new_owner) = config.owner {
+        vec![attr("action", "set_owner"), attr("new_owner", new_owner)]
+    } else {
+        vec![attr("action", "remove_owner")]
+    };
+
+    Ok(Response::new().add_attributes(attributes))
+}
+
+pub(crate) fn execute_set_ibc_fee_denom(
+    deps: DepsMut<NeutronQuery>,
+    _env: Env,
+    info: MessageInfo,
+    new_ibc_fee_denom: String,
+) -> ContractResult<Response<NeutronMsg>> {
+    let mut config = CONFIG.load(deps.storage)?;
+    check_owner(&config, &info)?;
+
+    config.ibc_fee_denom = new_ibc_fee_denom;
+    CONFIG.save(deps.storage, &config)?;
+
+    Ok(Response::new().add_attributes([
+        attr("action", "set_ibc_fee_denom"),
+        attr("new_ibc_fee_denom", config.ibc_fee_denom),
+    ]))
+}
+
+pub(crate) fn execute_withdraw_funds(
+    deps: DepsMut<NeutronQuery>,
+    _env: Env,
+    info: MessageInfo,
+    funds: Coin,
+    receiver: Option<String>,
+) -> ContractResult<Response<NeutronMsg>> {
+    let config = CONFIG.load(deps.storage)?;
+    check_owner(&config, &info)?;
+
+    let receiver = receiver
+        .map(|addr| deps.api.addr_validate(&addr))
+        .transpose()?
+        .unwrap_or(info.sender);
+
+    Ok(Response::new()
+        .add_message(BankMsg::Send {
+            to_address: receiver.to_string(),
+            amount: vec![funds.clone()],
+        })
+        .add_attributes([
+            attr("action", "withdraw_funds"),
+            attr("receiver", receiver),
+            attr("denom", funds.denom),
+            attr("amount", funds.amount),
+        ]))
+}
+
+fn check_owner(config: &Config, info: &MessageInfo) -> ContractResult<()> {
+    if let Some(owner) = &config.owner {
+        if owner != info.sender {
+            return Err(ContractError::Unauthorized {});
+        }
+    }
+    Ok(())
 }

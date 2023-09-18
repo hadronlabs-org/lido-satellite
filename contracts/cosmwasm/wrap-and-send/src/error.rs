@@ -13,6 +13,9 @@ pub enum ContractError {
 
     #[error("{0}")]
     LidoSatellite(#[from] LidoSatelliteError),
+
+    #[error("this method is only callable by owner")]
+    Unauthorized {},
 }
 
 pub type ContractResult<T> = Result<T, ContractError>;

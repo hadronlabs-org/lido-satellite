@@ -6,6 +6,7 @@ use cw_storage_plus::Item;
 pub struct Config {
     pub lido_satellite: Addr,
     pub ibc_fee_denom: String,
+    pub owner: Option<Addr>,
 }
 
 pub const CONFIG: Item<Config> = Item::new("config");

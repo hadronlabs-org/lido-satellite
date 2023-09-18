@@ -10,6 +10,7 @@ use std::marker::PhantomData;
 pub fn instantiate_wrapper(
     lido_satellite: impl Into<String>,
     ibc_fee_denom: impl Into<String>,
+    owner: Option<String>,
 ) -> (
     ContractResult<Response<NeutronMsg>>,
     OwnedDeps<MockStorage, MockApi, MockQuerier, NeutronQuery>,
@@ -30,6 +31,7 @@ pub fn instantiate_wrapper(
             InstantiateMsg {
                 lido_satellite: lido_satellite.into(),
                 ibc_fee_denom: ibc_fee_denom.into(),
+                owner,
             },
         ),
         deps,

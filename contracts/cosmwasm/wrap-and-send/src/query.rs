@@ -7,5 +7,6 @@ pub(crate) fn query_config(deps: Deps<NeutronQuery>) -> ContractResult<Binary> {
     Ok(to_binary(&ConfigResponse {
         lido_satellite: config.lido_satellite.into_string(),
         ibc_fee_denom: config.ibc_fee_denom,
+        owner: config.owner.map(|addr| addr.into_string()),
     })?)
 }
