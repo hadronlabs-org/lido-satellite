@@ -5,8 +5,8 @@ pub mod state;
 
 pub use crate::error::{ContractError, ContractResult};
 
-pub mod execute;
-pub mod query;
+mod execute;
+mod query;
 
 #[cfg(test)]
 mod tests;

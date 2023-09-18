@@ -1,6 +1,6 @@
 # Build results
 /target
-/schema
+schema
 /artifacts
 /cache
 /node_modules
