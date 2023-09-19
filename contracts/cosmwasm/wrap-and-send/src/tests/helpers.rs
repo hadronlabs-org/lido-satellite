@@ -1,7 +1,12 @@
-use crate::{contract::instantiate, msg::InstantiateMsg, ContractResult};
+use crate::{
+    contract::instantiate,
+    msg::InstantiateMsg,
+    state::{Config, CONFIG},
+    ContractResult,
+};
 use cosmwasm_std::{
     testing::{mock_env, mock_info, MockApi, MockQuerier, MockStorage},
-    Env, OwnedDeps, Response,
+    Addr, Deps, Env, OwnedDeps, Response,
 };
 use neutron_sdk::bindings::{msg::NeutronMsg, query::NeutronQuery};
 use std::marker::PhantomData;
@@ -10,7 +15,7 @@ use std::marker::PhantomData;
 pub fn instantiate_wrapper(
     lido_satellite: impl Into<String>,
     ibc_fee_denom: impl Into<String>,
-    owner: Option<String>,
+    owner: Option<&str>,
 ) -> (
     ContractResult<Response<NeutronMsg>>,
     OwnedDeps<MockStorage, MockApi, MockQuerier, NeutronQuery>,
@@ -31,10 +36,27 @@ pub fn instantiate_wrapper(
             InstantiateMsg {
                 lido_satellite: lido_satellite.into(),
                 ibc_fee_denom: ibc_fee_denom.into(),
-                owner,
+                owner: owner.map(|addr| addr.to_string()),
             },
         ),
         deps,
         env,
+    )
+}
+
+pub fn assert_config(
+    deps: Deps<NeutronQuery>,
+    lido_satellite: &str,
+    ibc_fee_denom: &str,
+    owner: Option<&str>,
+) {
+    let config = CONFIG.load(deps.storage).unwrap();
+    assert_eq!(
+        config,
+        Config {
+            lido_satellite: Addr::unchecked(lido_satellite),
+            ibc_fee_denom: ibc_fee_denom.to_string(),
+            owner: owner.map(Addr::unchecked),
+        }
     )
 }

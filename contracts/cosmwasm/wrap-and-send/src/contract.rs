@@ -7,7 +7,7 @@ use crate::{
     state::{Config, CONFIG},
     ContractResult,
 };
-use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response};
+use cosmwasm_std::{attr, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response};
 use cw2::set_contract_version;
 use neutron_sdk::bindings::{msg::NeutronMsg, query::NeutronQuery};
 
@@ -35,7 +35,14 @@ pub fn instantiate(
     };
     CONFIG.save(deps.storage, &config)?;
 
-    Ok(Response::new().add_attribute("lido_satellite", msg.lido_satellite))
+    let mut attributes = vec![
+        attr("lido_satellite", config.lido_satellite),
+        attr("ibc_fee_denom", config.ibc_fee_denom),
+    ];
+    if let Some(owner) = config.owner {
+        attributes.push(attr("owner", owner))
+    }
+    Ok(Response::new().add_attributes(attributes))
 }
 
 #[cfg_attr(not(feature = "library"), cosmwasm_std::entry_point)]

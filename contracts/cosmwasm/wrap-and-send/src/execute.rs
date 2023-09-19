@@ -30,6 +30,7 @@ pub(crate) fn execute_wrap_and_send(
         .querier
         .query_wasm_smart(&config.lido_satellite, &LidoSatelliteQueryConfig {})?;
 
+    // TODO: replace subsidizing with automatic wstETH/untrn pool
     // Lido Satellite will filter funds, however, we have to filter them ourselves anyway,
     // because we need to know the amount of funds to send within next IBC message
     let amount_to_send = find_denom(&info.funds, &lido_satellite_config.bridged_denom)?
