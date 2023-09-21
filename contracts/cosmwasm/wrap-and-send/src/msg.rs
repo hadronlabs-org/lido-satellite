@@ -1,22 +1,22 @@
+use astroport::router::SwapOperation;
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::Coin;
+use cosmwasm_std::Uint128;
 
 #[cw_serde]
 pub struct InstantiateMsg {
-    /// Address of Lido Satellite contract, used to mint canonical wstETH
+    /// Address of Lido Satellite contract, used to mint canonical funds
     pub lido_satellite: String,
-    /// Denom to be used to pay for IBC fees
-    pub ibc_fee_denom: String,
-    /// Owner is able to set denom used to pay for IBC fees.
-    /// Owner is also able to withdraw funds from contract's account.
-    pub owner: Option<String>,
+    /// Address of Astroport Router contract, used to swap canonical funds into IBC fee funds
+    pub astroport_router: String,
 }
 
 #[cw_serde]
 pub enum ExecuteMsg {
     /// This method expects user to send bridged funds, which will be sent to Lido Satellite
-    /// and locked in there. Lido Satellite will mint canonical wstETH in return, which will
-    /// be sent further to another destination chain
+    /// and locked in there. Lido Satellite will mint canonical funds in return, which will
+    /// be sent further to another destination chain. This call also automatically swaps a small
+    /// part of funds for IBC fee denom in order to pay for IBC fee. In case of any failure
+    /// possible, all funds will be refunded to specified refund address controlled by user
     WrapAndSend {
         /// Source port to send funds from
         source_port: String,
@@ -24,24 +24,27 @@ pub enum ExecuteMsg {
         source_channel: String,
         /// Address of the receiver on a remote chain
         receiver: String,
-    },
-    /// Can only be called by an owner
-    SetOwner { new_owner: Option<String> },
-    /// Can only be called by owner
-    SetIbcFeeDenom { new_ibc_fee_denom: String },
-    /// Can only be called by owner
-    WithdrawFunds {
-        funds: Coin,
-        /// Recipient of withdrawn funds, defaults to message sender if not set
-        receiver: Option<String>,
+        /// Amount of bridged funds which will be swapped for IBC fee denom. If supplied amount of
+        /// bridged funds is less than this value, user will receive canonical funds on their
+        /// specified refund address. This amount should cover both `ack_fee` and `timeout_fee`,
+        /// unused amount of fee will be refunded as well
+        amount_to_swap_for_ibc_fee: Uint128,
+        /// Denom used to spend on IBC fee. It will be acquired from Astroport Router in exchange
+        /// for `amount_to_swap_for_ibc_fee` amount of canonical funds
+        ibc_fee_denom: String,
+        /// Array of swap instructions for Astroport router. These instructions MUST swap from
+        /// canonical denom to IBC fee denom, otherwise transaction will revert and user will
+        /// receive canonical funds and result of swap on their specified refund address
+        astroport_swap_operations: Vec<SwapOperation>,
+        /// Address of user account on Neutron network which will be used for all refunds
+        refund_address: String,
     },
 }
 
 #[cw_serde]
 pub struct ConfigResponse {
     pub lido_satellite: String,
-    pub ibc_fee_denom: String,
-    pub owner: Option<String>,
+    pub astroport_router: String,
 }
 
 #[cw_serde]

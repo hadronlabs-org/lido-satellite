@@ -1,163 +1,97 @@
 use crate::{
-    state::{Config, CONFIG},
-    ContractError, ContractResult,
+    contract::LIDO_SATELLITE_WRAP_REPLY_ID,
+    state::{WrapAndSendContext, CONFIG, WRAP_AND_SEND_CONTEXT},
+    ContractResult,
 };
+use astroport::router::SwapOperation;
 use cosmwasm_std::{
-    attr, coin, to_binary, BankMsg, Coin, CosmosMsg, DepsMut, Env, MessageInfo, Response, WasmMsg,
+    attr, coin, to_binary, BankMsg, DepsMut, Env, MessageInfo, Response, SubMsg, Uint128, WasmMsg,
 };
 use lido_satellite::{
-    error::ContractError as LidoSatelliteContractError, execute::find_denom,
-    msg::ConfigResponse as LidoSatelliteConfigResponse,
-    msg::ExecuteMsg::Mint as LidoSatelliteExecuteMint,
-    msg::QueryMsg::Config as LidoSatelliteQueryConfig,
+    error::ContractError as LidoSatelliteContractError,
+    execute::find_denom,
+    msg::{
+        ConfigResponse as LidoSatelliteConfigResponse,
+        ExecuteMsg::Mint as LidoSatelliteExecuteMint, QueryMsg::Config as LidoSatelliteQueryConfig,
+    },
 };
-use neutron_sdk::{
-    bindings::{msg::NeutronMsg, query::NeutronQuery},
-    query::min_ibc_fee::query_min_ibc_fee,
-    sudo::msg::RequestPacketTimeoutHeight,
-};
+use neutron_sdk::bindings::{msg::NeutronMsg, query::NeutronQuery};
 
 pub(crate) fn execute_wrap_and_send(
     deps: DepsMut<NeutronQuery>,
-    env: Env,
+    _env: Env,
     info: MessageInfo,
     source_port: String,
     source_channel: String,
     receiver: String,
+    amount_to_swap_for_ibc_fee: Uint128,
+    ibc_fee_denom: String,
+    astroport_swap_operations: Vec<SwapOperation>,
+    refund_address: String,
 ) -> ContractResult<Response<NeutronMsg>> {
+    // Step 1.
+    // Issue wrap message to Lido Satellite and handle reply
+
     let config = CONFIG.load(deps.storage)?;
     let lido_satellite_config: LidoSatelliteConfigResponse = deps
         .querier
         .query_wasm_smart(&config.lido_satellite, &LidoSatelliteQueryConfig {})?;
 
-    // TODO: replace subsidizing with automatic wstETH/untrn pool
-    // Lido Satellite will filter funds, however, we have to filter them ourselves anyway,
-    // because we need to know the amount of funds to send within next IBC message
-    let amount_to_send = find_denom(&info.funds, &lido_satellite_config.bridged_denom)?
+    let received_amount = find_denom(&info.funds, &lido_satellite_config.bridged_denom)?
+        // it is okay to return an error here, since we can be sure that
+        // Axelar will not supply more than one denom, it is impossible to do so
+        // using current implementation of IBC Transfer module
         .ok_or(LidoSatelliteContractError::NothingToMint {})?
-        .amount
-        .u128();
-    let ibc_fee = {
-        let mut fee = query_min_ibc_fee(deps.as_ref())?.min_fee;
-        // fee.recv_fee is always empty
-        fee.ack_fee
-            .retain(|coin| coin.denom == config.ibc_fee_denom);
-        fee.timeout_fee
-            .retain(|coin| coin.denom == config.ibc_fee_denom);
-        fee
+        .amount;
+    let amount_to_send = match received_amount.checked_sub(amount_to_swap_for_ibc_fee) {
+        Err(_) => {
+            return Ok(Response::new()
+                .add_message(BankMsg::Send {
+                    to_address: refund_address.to_string(),
+                    amount: info.funds,
+                })
+                .add_attributes([
+                    attr("action", "cancel_wrap_and_send"),
+                    attr("reason", "not_enough_funds_to_swap"),
+                    attr("provided", received_amount),
+                    attr("required", amount_to_swap_for_ibc_fee),
+                ]))
+        }
+        Ok(v) => v,
     };
 
-    let wrap_msg: CosmosMsg<NeutronMsg> = WasmMsg::Execute {
+    let wrap_msg = WasmMsg::Execute {
         contract_addr: config.lido_satellite.into_string(),
         msg: to_binary(&LidoSatelliteExecuteMint { receiver: None })?,
         funds: info.funds,
-    }
-    .into();
-    let ibc_msg: CosmosMsg<NeutronMsg> = NeutronMsg::IbcTransfer {
-        source_port: source_port.clone(),
-        source_channel: source_channel.clone(),
-        token: coin(amount_to_send, &lido_satellite_config.canonical_denom),
-        sender: env.contract.address.into_string(),
-        receiver: receiver.clone(),
-        timeout_height: RequestPacketTimeoutHeight {
-            revision_number: None,
-            revision_height: None,
-        },
-        timeout_timestamp: env.block.time.plus_hours(1).nanos(),
-        memo: "".to_string(),
-        fee: ibc_fee,
-    }
-    .into();
-
-    Ok(Response::new()
-        .add_messages([wrap_msg, ibc_msg])
-        .add_attributes([
-            attr("action", "wrap_and_send"),
-            attr("source_denom", lido_satellite_config.bridged_denom),
-            attr("target_denom", lido_satellite_config.canonical_denom),
-            attr("amount", amount_to_send.to_string()),
-            attr("sender", info.sender),
-            attr("receiver", receiver),
-            attr("source_port", source_port),
-            attr("source_channel", source_channel),
-        ]))
-}
-
-pub(crate) fn execute_set_owner(
-    deps: DepsMut<NeutronQuery>,
-    _env: Env,
-    info: MessageInfo,
-    new_owner: Option<String>,
-) -> ContractResult<Response<NeutronMsg>> {
-    let mut config = CONFIG.load(deps.storage)?;
-    check_owner(&config, &info)?;
-
-    let new_owner = new_owner
-        .map(|addr| deps.api.addr_validate(&addr))
-        .transpose()?;
-    config.owner = new_owner;
-    CONFIG.save(deps.storage, &config)?;
-
-    let attributes = if let Some(new_owner) = config.owner {
-        vec![attr("action", "set_owner"), attr("new_owner", new_owner)]
-    } else {
-        vec![attr("action", "remove_owner")]
     };
 
-    Ok(Response::new().add_attributes(attributes))
-}
-
-pub(crate) fn execute_set_ibc_fee_denom(
-    deps: DepsMut<NeutronQuery>,
-    _env: Env,
-    info: MessageInfo,
-    new_ibc_fee_denom: String,
-) -> ContractResult<Response<NeutronMsg>> {
-    let mut config = CONFIG.load(deps.storage)?;
-    check_owner(&config, &info)?;
-
-    config.ibc_fee_denom = new_ibc_fee_denom;
-    CONFIG.save(deps.storage, &config)?;
-
-    Ok(Response::new().add_attributes([
-        attr("action", "set_ibc_fee_denom"),
-        attr("new_ibc_fee_denom", config.ibc_fee_denom),
-    ]))
-}
-
-pub(crate) fn execute_withdraw_funds(
-    deps: DepsMut<NeutronQuery>,
-    _env: Env,
-    info: MessageInfo,
-    funds: Coin,
-    receiver: Option<String>,
-) -> ContractResult<Response<NeutronMsg>> {
-    let config = CONFIG.load(deps.storage)?;
-    check_owner(&config, &info)?;
-
-    let receiver = receiver
-        .map(|addr| deps.api.addr_validate(&addr))
-        .transpose()?
-        .unwrap_or(info.sender);
+    let refund_address = deps.api.addr_validate(&refund_address)?;
+    let amount_to_wrap = coin(received_amount.u128(), &lido_satellite_config.bridged_denom);
+    let amount_to_send = coin(
+        amount_to_send.u128(),
+        &lido_satellite_config.canonical_denom,
+    );
+    let amount_to_swap_for_ibc_fee = coin(
+        amount_to_swap_for_ibc_fee.u128(),
+        &lido_satellite_config.canonical_denom,
+    );
+    WRAP_AND_SEND_CONTEXT.save(
+        deps.storage,
+        &WrapAndSendContext {
+            source_port,
+            source_channel,
+            receiver,
+            astroport_swap_operations,
+            refund_address,
+            amount_to_wrap,
+            amount_to_send,
+            amount_to_swap_for_ibc_fee,
+            ibc_fee_denom,
+        },
+    )?;
 
     Ok(Response::new()
-        .add_message(BankMsg::Send {
-            to_address: receiver.to_string(),
-            amount: vec![funds.clone()],
-        })
-        .add_attributes([
-            attr("action", "withdraw_funds"),
-            attr("receiver", receiver),
-            attr("denom", funds.denom),
-            attr("amount", funds.amount),
-        ]))
-}
-
-fn check_owner(config: &Config, info: &MessageInfo) -> ContractResult<()> {
-    if let Some(owner) = &config.owner {
-        if owner != info.sender {
-            return Err(ContractError::Unauthorized {});
-        }
-    }
-    Ok(())
+        .add_submessage(SubMsg::reply_always(wrap_msg, LIDO_SATELLITE_WRAP_REPLY_ID))
+        .add_attributes([attr("action", "wrap_and_send")]))
 }

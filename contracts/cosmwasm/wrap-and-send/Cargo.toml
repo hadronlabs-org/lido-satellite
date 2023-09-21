@@ -19,3 +19,4 @@ neutron-sdk = { workspace = true }
 cw2 = { workspace = true }
 thiserror = { workspace = true }
 lido-satellite = { path = "../lido-satellite", features = ["library"] }
+astroport = { workspace = true }

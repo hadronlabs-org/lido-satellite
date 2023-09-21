@@ -16,6 +16,9 @@ pub enum ContractError {
 
     #[error("this method is only callable by owner")]
     Unauthorized {},
+
+    #[error("unknown reply id: {id}")]
+    UnknownReplyId { id: u64 },
 }
 
 pub type ContractResult<T> = Result<T, ContractError>;

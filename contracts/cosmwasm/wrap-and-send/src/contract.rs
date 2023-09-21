@@ -1,11 +1,11 @@
+use crate::reply::reply_astroport_swap;
 use crate::{
-    execute::{
-        execute_set_ibc_fee_denom, execute_set_owner, execute_withdraw_funds, execute_wrap_and_send,
-    },
+    execute::execute_wrap_and_send,
     msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg},
     query::query_config,
+    reply::reply_lido_satellite_wrap,
     state::{Config, CONFIG},
-    ContractResult,
+    ContractError, ContractResult,
 };
 use cosmwasm_std::{attr, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response};
 use cw2::set_contract_version;
@@ -13,6 +13,9 @@ use neutron_sdk::bindings::{msg::NeutronMsg, query::NeutronQuery};
 
 pub const CONTRACT_NAME: &str = env!("CARGO_PKG_NAME");
 pub const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
+
+pub(crate) const LIDO_SATELLITE_WRAP_REPLY_ID: u64 = 1;
+pub(crate) const ASTROPORT_SWAP_REPLY_ID: u64 = 2;
 
 #[cfg_attr(not(feature = "library"), cosmwasm_std::entry_point)]
 pub fn instantiate(
@@ -24,25 +27,18 @@ pub fn instantiate(
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
     let lido_satellite = deps.api.addr_validate(&msg.lido_satellite)?;
-    let owner = msg
-        .owner
-        .map(|addr| deps.api.addr_validate(&addr))
-        .transpose()?;
+    let astroport_router = deps.api.addr_validate(&msg.astroport_router)?;
     let config = Config {
         lido_satellite,
-        ibc_fee_denom: msg.ibc_fee_denom,
-        owner,
+        astroport_router,
     };
     CONFIG.save(deps.storage, &config)?;
 
-    let mut attributes = vec![
+    Ok(Response::new().add_attributes([
+        attr("action", "instantiate"),
         attr("lido_satellite", config.lido_satellite),
-        attr("ibc_fee_denom", config.ibc_fee_denom),
-    ];
-    if let Some(owner) = config.owner {
-        attributes.push(attr("owner", owner))
-    }
-    Ok(Response::new().add_attributes(attributes))
+        attr("astroport_router", config.astroport_router),
+    ]))
 }
 
 #[cfg_attr(not(feature = "library"), cosmwasm_std::entry_point)]
@@ -57,14 +53,22 @@ pub fn execute(
             source_port,
             source_channel,
             receiver,
-        } => execute_wrap_and_send(deps, env, info, source_port, source_channel, receiver),
-        ExecuteMsg::SetOwner { new_owner } => execute_set_owner(deps, env, info, new_owner),
-        ExecuteMsg::SetIbcFeeDenom { new_ibc_fee_denom } => {
-            execute_set_ibc_fee_denom(deps, env, info, new_ibc_fee_denom)
-        }
-        ExecuteMsg::WithdrawFunds { funds, receiver } => {
-            execute_withdraw_funds(deps, env, info, funds, receiver)
-        }
+            amount_to_swap_for_ibc_fee,
+            ibc_fee_denom,
+            astroport_swap_operations,
+            refund_address,
+        } => execute_wrap_and_send(
+            deps,
+            env,
+            info,
+            source_port,
+            source_channel,
+            receiver,
+            amount_to_swap_for_ibc_fee,
+            ibc_fee_denom,
+            astroport_swap_operations,
+            refund_address,
+        ),
     }
 }
 
@@ -80,11 +84,19 @@ pub fn migrate(
     _deps: DepsMut<NeutronQuery>,
     _env: Env,
     _msg: MigrateMsg,
-) -> ContractResult<Response> {
+) -> ContractResult<Response<NeutronMsg>> {
     Ok(Response::new())
 }
 
 #[cfg_attr(not(feature = "library"), cosmwasm_std::entry_point)]
-pub fn reply(_deps: DepsMut<NeutronQuery>, _env: Env, _msg: Reply) -> ContractResult<Response> {
-    Ok(Response::new())
+pub fn reply(
+    deps: DepsMut<NeutronQuery>,
+    env: Env,
+    msg: Reply,
+) -> ContractResult<Response<NeutronMsg>> {
+    match msg.id {
+        LIDO_SATELLITE_WRAP_REPLY_ID => reply_lido_satellite_wrap(deps, env, msg.result),
+        ASTROPORT_SWAP_REPLY_ID => reply_astroport_swap(deps, env, msg.result),
+        id => Err(ContractError::UnknownReplyId { id }),
+    }
 }

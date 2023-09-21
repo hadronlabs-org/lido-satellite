@@ -7,6 +7,7 @@ pub use crate::error::{ContractError, ContractResult};
 
 mod execute;
 mod query;
+mod reply;
 
 #[cfg(test)]
 mod tests;

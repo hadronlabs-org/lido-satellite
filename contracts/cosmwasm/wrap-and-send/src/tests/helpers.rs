@@ -14,8 +14,7 @@ use std::marker::PhantomData;
 #[allow(clippy::type_complexity)]
 pub fn instantiate_wrapper(
     lido_satellite: impl Into<String>,
-    ibc_fee_denom: impl Into<String>,
-    owner: Option<&str>,
+    astroport_router: impl Into<String>,
 ) -> (
     ContractResult<Response<NeutronMsg>>,
     OwnedDeps<MockStorage, MockApi, MockQuerier, NeutronQuery>,
@@ -35,8 +34,7 @@ pub fn instantiate_wrapper(
             mock_info("admin", &[]),
             InstantiateMsg {
                 lido_satellite: lido_satellite.into(),
-                ibc_fee_denom: ibc_fee_denom.into(),
-                owner: owner.map(|addr| addr.to_string()),
+                astroport_router: astroport_router.into(),
             },
         ),
         deps,
@@ -44,19 +42,13 @@ pub fn instantiate_wrapper(
     )
 }
 
-pub fn assert_config(
-    deps: Deps<NeutronQuery>,
-    lido_satellite: &str,
-    ibc_fee_denom: &str,
-    owner: Option<&str>,
-) {
+pub fn assert_config(deps: Deps<NeutronQuery>, lido_satellite: &str, astroport_router: &str) {
     let config = CONFIG.load(deps.storage).unwrap();
     assert_eq!(
         config,
         Config {
             lido_satellite: Addr::unchecked(lido_satellite),
-            ibc_fee_denom: ibc_fee_denom.to_string(),
-            owner: owner.map(Addr::unchecked),
+            astroport_router: Addr::unchecked(astroport_router),
         }
     )
 }
