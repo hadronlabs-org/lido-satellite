@@ -1,9 +1,8 @@
-use crate::reply::reply_astroport_swap;
 use crate::{
     execute::execute_wrap_and_send,
     msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg},
     query::query_config,
-    reply::reply_lido_satellite_wrap,
+    reply::{reply_astroport_swap, reply_lido_satellite_wrap},
     state::{Config, CONFIG},
     ContractError, ContractResult,
 };
