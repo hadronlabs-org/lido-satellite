@@ -22,12 +22,13 @@ pub(crate) fn execute_wrap_and_send(
     deps: DepsMut<NeutronQuery>,
     _env: Env,
     info: MessageInfo,
-    source_port: String,
-    source_channel: String,
+    source_port: String,    // TODO: what if this port doesn't exist?
+    source_channel: String, // TODO: what if this channel doesn't exist?
     receiver: String,
-    amount_to_swap_for_ibc_fee: Uint128,
-    ibc_fee_denom: String,
-    astroport_swap_operations: Vec<SwapOperation>,
+    amount_to_swap_for_ibc_fee: Uint128, // TODO: what if it is zero?
+    ibc_fee_denom: String,               // TODO: what if this denom is invalid?
+    astroport_swap_operations: Vec<SwapOperation>, // TODO: what if there are no operations?
+    //                                                TODO: what if it swaps for a wrong coin?
     refund_address: String,
 ) -> ContractResult<Response<NeutronMsg>> {
     // Step 1.
