@@ -192,32 +192,34 @@ else
   exit 1
 fi
 
-echo
-wrap_and_send_code_id="$(neutrond tx wasm store "$WRAP_AND_SEND_PATH" --from "$MAIN_WALLET" "${ntx[@]}" | jq -r "$(select_attr "store_code" "code_id")")"
-echo "Wrap and Send Code ID: $wrap_and_send_code_id"
-msg="$(printf '{"lido_satellite":"%s","ibc_fee_denom":"untrn"}' "$lido_satellite_contract_address")"
-wrap_and_send_contract_address="$(neutrond tx wasm instantiate "$wrap_and_send_code_id" "$msg" --amount 2000untrn --no-admin --label wrap_and_send --from "$MAIN_WALLET" "${ntx[@]}" | jq -r "$(select_attr "instantiate" "_contract_address")")"
-echo "Wrap and Send Contract address: $wrap_and_send_contract_address"
+# Tests below will remain disabled until astroport router is mocked
 
-echo
-echo "Mint 200 wATOM and send to Gaia"
-msg="$(printf '{"wrap_and_send":{"source_port":"transfer","source_channel":"channel-0","receiver":"%s"}}' "$MAIN_WALLET_ADDR_GAIA")"
-neutrond tx wasm execute "$wrap_and_send_contract_address" "$msg" --amount "200$ATOM_ON_NEUTRON_IBC_DENOM" --from "$MAIN_WALLET" "${ntx[@]}" | assert_success
-assert_balance_neutron "$wrap_and_send_contract_address" "untrn" "0"
-assert_balance_neutron "$lido_satellite_contract_address" "$ATOM_ON_NEUTRON_IBC_DENOM" "2700"
-
-echo
-echo -n "Waiting 10 seconds for IBC transfer to complete"
-# shellcheck disable=SC2034
-for i in $(seq 10); do
-  sleep 1
-  echo -n .
-done
-echo " done"
-
-watom_on_gaia_ibc_denom="ibc/$(printf 'transfer/channel-0/factory/%s/wATOM' "$lido_satellite_contract_address" \
-  | sha256sum - | awk '{print $1}' | tr '[:lower:]' '[:upper:]')"
-echo
-assert_balance_neutron "$wrap_and_send_contract_address" "untrn" "1000"
-assert_balance_neutron "$lido_satellite_contract_address" "$ATOM_ON_NEUTRON_IBC_DENOM" "2700"
-assert_balance_gaia "$MAIN_WALLET_ADDR_GAIA" "$watom_on_gaia_ibc_denom" "200"
+#echo
+#wrap_and_send_code_id="$(neutrond tx wasm store "$WRAP_AND_SEND_PATH" --from "$MAIN_WALLET" "${ntx[@]}" | jq -r "$(select_attr "store_code" "code_id")")"
+#echo "Wrap and Send Code ID: $wrap_and_send_code_id"
+#msg="$(printf '{"lido_satellite":"%s","ibc_fee_denom":"untrn"}' "$lido_satellite_contract_address")"
+#wrap_and_send_contract_address="$(neutrond tx wasm instantiate "$wrap_and_send_code_id" "$msg" --amount 2000untrn --no-admin --label wrap_and_send --from "$MAIN_WALLET" "${ntx[@]}" | jq -r "$(select_attr "instantiate" "_contract_address")")"
+#echo "Wrap and Send Contract address: $wrap_and_send_contract_address"
+#
+#echo
+#echo "Mint 200 wATOM and send to Gaia"
+#msg="$(printf '{"wrap_and_send":{"source_port":"transfer","source_channel":"channel-0","receiver":"%s"}}' "$MAIN_WALLET_ADDR_GAIA")"
+#neutrond tx wasm execute "$wrap_and_send_contract_address" "$msg" --amount "200$ATOM_ON_NEUTRON_IBC_DENOM" --from "$MAIN_WALLET" "${ntx[@]}" | assert_success
+#assert_balance_neutron "$wrap_and_send_contract_address" "untrn" "0"
+#assert_balance_neutron "$lido_satellite_contract_address" "$ATOM_ON_NEUTRON_IBC_DENOM" "2700"
+#
+#echo
+#echo -n "Waiting 10 seconds for IBC transfer to complete"
+## shellcheck disable=SC2034
+#for i in $(seq 10); do
+#  sleep 1
+#  echo -n .
+#done
+#echo " done"
+#
+#watom_on_gaia_ibc_denom="ibc/$(printf 'transfer/channel-0/factory/%s/wATOM' "$lido_satellite_contract_address" \
+#  | sha256sum - | awk '{print $1}' | tr '[:lower:]' '[:upper:]')"
+#echo
+#assert_balance_neutron "$wrap_and_send_contract_address" "untrn" "1000"
+#assert_balance_neutron "$lido_satellite_contract_address" "$ATOM_ON_NEUTRON_IBC_DENOM" "2700"
+#assert_balance_gaia "$MAIN_WALLET_ADDR_GAIA" "$watom_on_gaia_ibc_denom" "200"

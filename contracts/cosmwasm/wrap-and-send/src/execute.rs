@@ -17,6 +17,7 @@ use lido_satellite::{
 };
 use neutron_sdk::bindings::{msg::NeutronMsg, query::NeutronQuery};
 
+#[allow(clippy::too_many_arguments)]
 pub(crate) fn execute_wrap_and_send(
     deps: DepsMut<NeutronQuery>,
     _env: Env,

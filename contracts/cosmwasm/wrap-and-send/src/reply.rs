@@ -10,7 +10,9 @@ use cosmwasm_std::{
 use neutron_sdk::{
     bindings::{msg::NeutronMsg, query::NeutronQuery},
     query::min_ibc_fee::query_min_ibc_fee,
+    sudo::msg::RequestPacketTimeoutHeight,
 };
+use std::cmp::Ordering;
 
 pub(crate) fn reply_lido_satellite_wrap(
     deps: DepsMut<NeutronQuery>,
@@ -66,17 +68,14 @@ pub(crate) fn reply_lido_satellite_wrap(
 
             Ok(Response::new()
                 .add_submessage(SubMsg::reply_always(swap_msg, ASTROPORT_SWAP_REPLY_ID))
-                .add_attributes([
-                    attr("action", "wrap_and_send"),
-                    attr("subaction", "lido_satellite_wrap"),
-                ]))
+                .add_attributes([attr("subaction", "lido_satellite_wrap")]))
         }
     }
 }
 
 pub(crate) fn reply_astroport_swap(
     deps: DepsMut<NeutronQuery>,
-    _env: Env,
+    env: Env,
     result: SubMsgResult,
 ) -> ContractResult<Response<NeutronMsg>> {
     // Step 3.
@@ -84,7 +83,6 @@ pub(crate) fn reply_astroport_swap(
     // On failure: refund canonical funds back to user
     // On success: refund excess IBC fee denom and perform IBC transfer to destination chain
 
-    let config = CONFIG.load(deps.storage)?;
     let context = WRAP_AND_SEND_CONTEXT.load(deps.storage)?;
     let ibc_fee = IBC_FEE.load(deps.storage)?;
 
@@ -107,11 +105,82 @@ pub(crate) fn reply_astroport_swap(
         // Astroport Router doesn't set data in Response, and we don't have to access events either
         // This means we can safely ignore reply response
         SubMsgResult::Ok(_response) => {
-            // TODO: 1. query own balance
-            // TODO: 2. check if there are excess IBC fee denom
-            // TODO: 3. launch IBC transfer
-            // TODO: 4. refund excess IBC fee denom
-            Ok(Response::new())
+            let fee_balance = deps
+                .querier
+                .query_balance(&env.contract.address, &context.ibc_fee_denom)?;
+            let refund = match fee_balance
+                .amount
+                .cmp(&(ibc_fee.ack_fee[0].amount + ibc_fee.timeout_fee[0].amount))
+            {
+                Ordering::Less => {
+                    // should never happen, but let's be cautious
+                    return Ok(Response::new()
+                        .add_message(BankMsg::Send {
+                            to_address: context.refund_address.into_string(),
+                            amount: vec![context.amount_to_send, fee_balance],
+                        })
+                        .add_attributes([
+                            attr("action", "cancel_wrap_and_send"),
+                            attr("reason", "not_enough_fee_after_swap"),
+                        ]));
+                }
+                Ordering::Equal => None,
+                Ordering::Greater => Some(
+                    fee_balance.amount - ibc_fee.ack_fee[0].amount - ibc_fee.timeout_fee[0].amount,
+                ),
+            };
+
+            // TODO: save IBC transfer data so we can handle sudo callbacks later
+            let timeout_timestamp = env.block.time.plus_minutes(20).nanos();
+            let ibc_transfer = NeutronMsg::IbcTransfer {
+                source_port: context.source_port.clone(),
+                source_channel: context.source_channel.clone(),
+                token: context.amount_to_send.clone(),
+                sender: env.contract.address.to_string(),
+                receiver: context.receiver.clone(),
+                timeout_height: RequestPacketTimeoutHeight {
+                    revision_number: None,
+                    revision_height: None,
+                },
+                // 20 minutes should be enough for IBC transfer to go through
+                timeout_timestamp,
+                memo: "".to_string(),
+                fee: ibc_fee,
+            };
+
+            let mut response = Response::new().add_message(ibc_transfer).add_attributes([
+                attr("subaction", "astroport_router_swap"),
+                attr("swapped_amount", fee_balance.amount),
+                attr("subaction", "perform_ibc_transfer"),
+                attr("source_port", context.source_port),
+                attr("source_channel", context.source_channel),
+                attr(
+                    "token",
+                    format!(
+                        "{}{}",
+                        context.amount_to_send.denom, context.amount_to_send.amount
+                    ),
+                ),
+                attr("sender", env.contract.address.into_string()),
+                attr("receiver", context.receiver),
+                attr("timeout_height", "null"),
+                attr("timeout_timestamp", timeout_timestamp.to_string()),
+            ]);
+
+            if let Some(refund) = refund {
+                let refund = coin(refund.u128(), context.ibc_fee_denom);
+                response = response
+                    .add_message(BankMsg::Send {
+                        to_address: context.refund_address.into_string(),
+                        amount: vec![refund.clone()],
+                    })
+                    .add_attributes([
+                        attr("subaction", "refund_excess_swapped_fee"),
+                        attr("amount", format!("{}{}", refund.denom, refund.amount)),
+                    ])
+            }
+
+            Ok(response)
         }
     }
 }
