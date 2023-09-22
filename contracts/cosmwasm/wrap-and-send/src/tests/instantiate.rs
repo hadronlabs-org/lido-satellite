@@ -1,10 +1,11 @@
 use crate::tests::helpers::{assert_config, instantiate_wrapper};
-use cosmwasm_std::{attr, Response};
+use cosmwasm_std::{attr, testing::MockQuerier, Response};
 use neutron_sdk::bindings::msg::NeutronMsg;
 
 #[test]
 fn success() {
-    let (result, deps, _env) = instantiate_wrapper("lido_satellite", "astroport_router");
+    let (result, deps, _env) =
+        instantiate_wrapper::<MockQuerier>("lido_satellite", "astroport_router");
     let response = result.unwrap();
     assert_instantiate_response(&response, "lido_satellite", "astroport_router");
     assert_config(deps.as_ref(), "lido_satellite", "astroport_router");

@@ -5,25 +5,25 @@ use crate::{
     ContractResult,
 };
 use cosmwasm_std::{
-    testing::{mock_env, mock_info, MockApi, MockQuerier, MockStorage},
-    Addr, Deps, Env, OwnedDeps, Response,
+    testing::{mock_env, mock_info, MockApi, MockStorage},
+    Addr, Deps, Env, OwnedDeps, Querier, Response,
 };
 use neutron_sdk::bindings::{msg::NeutronMsg, query::NeutronQuery};
 use std::marker::PhantomData;
 
 #[allow(clippy::type_complexity)]
-pub fn instantiate_wrapper(
+pub fn instantiate_wrapper<Q: Querier + Default>(
     lido_satellite: impl Into<String>,
     astroport_router: impl Into<String>,
 ) -> (
     ContractResult<Response<NeutronMsg>>,
-    OwnedDeps<MockStorage, MockApi, MockQuerier, NeutronQuery>,
+    OwnedDeps<MockStorage, MockApi, Q, NeutronQuery>,
     Env,
 ) {
     let mut deps = OwnedDeps {
         storage: MockStorage::default(),
         api: MockApi::default(),
-        querier: MockQuerier::default(),
+        querier: Q::default(),
         custom_query_type: PhantomData,
     };
     let env = mock_env();
