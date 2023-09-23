@@ -55,8 +55,17 @@ pub(crate) fn execute_wrap_and_send(
                 .add_attributes([
                     attr("action", "cancel_wrap_and_send"),
                     attr("reason", "not_enough_funds_to_swap"),
-                    attr("provided", received_amount),
-                    attr("required", amount_to_swap_for_ibc_fee),
+                    attr(
+                        "provided",
+                        format!("{}{}", received_amount, lido_satellite_config.bridged_denom),
+                    ),
+                    attr(
+                        "required",
+                        format!(
+                            "{}{}",
+                            amount_to_swap_for_ibc_fee, lido_satellite_config.bridged_denom
+                        ),
+                    ),
                 ]))
         }
         Ok(v) => v,
