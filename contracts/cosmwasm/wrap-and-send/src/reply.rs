@@ -160,7 +160,7 @@ pub(crate) fn reply_astroport_swap(
                     "token",
                     format!(
                         "{}{}",
-                        context.amount_to_send.denom, context.amount_to_send.amount
+                        context.amount_to_send.amount, context.amount_to_send.denom
                     ),
                 ),
                 attr("sender", env.contract.address.into_string()),
@@ -178,7 +178,7 @@ pub(crate) fn reply_astroport_swap(
                     })
                     .add_attributes([
                         attr("subaction", "refund_excess_swapped_fee"),
-                        attr("amount", format!("{}{}", refund.denom, refund.amount)),
+                        attr("amount", format!("{}{}", refund.amount, refund.denom)),
                     ])
             }
 
