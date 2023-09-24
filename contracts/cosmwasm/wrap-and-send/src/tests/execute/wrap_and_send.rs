@@ -1,14 +1,13 @@
 use crate::{
     contract::execute,
-    msg::ExecuteMsg,
-    state::{WrapAndSendContext, WRAP_AND_SEND_CONTEXT},
-    tests::helpers::instantiate_wrapper,
+    state::WRAP_AND_SEND_CONTEXT,
+    tests::helpers::{craft_wrap_and_send_context, craft_wrap_and_send_msg, instantiate_wrapper},
     ContractError,
 };
 use cosmwasm_std::{
-    attr, coin, coins, from_slice, testing::mock_info, to_binary, Addr, BankMsg, ContractResult,
-    CosmosMsg, Empty, Querier, QuerierResult, QueryRequest, SystemError, SystemResult, Uint128,
-    WasmMsg, WasmQuery,
+    attr, coin, coins, from_slice, testing::mock_info, to_binary, BankMsg, ContractResult,
+    CosmosMsg, Empty, Querier, QuerierResult, QueryRequest, SystemError, SystemResult, WasmMsg,
+    WasmQuery,
 };
 use lido_satellite::{
     error::ContractError as LidoSatelliteError,
@@ -53,18 +52,6 @@ impl Querier for CustomMockQuerier {
     }
 }
 
-fn wrap_and_send_msg(amount_to_swap_for_ibc_fee: impl Into<Uint128>) -> ExecuteMsg {
-    ExecuteMsg::WrapAndSend {
-        source_port: "source_port".to_string(),
-        source_channel: "source_channel".to_string(),
-        receiver: "receiver".to_string(),
-        amount_to_swap_for_ibc_fee: amount_to_swap_for_ibc_fee.into(),
-        ibc_fee_denom: "ibc_fee_denom".to_string(),
-        astroport_swap_operations: vec![],
-        refund_address: "refund_address".to_string(),
-    }
-}
-
 mod funds {
     use super::*;
 
@@ -76,7 +63,7 @@ mod funds {
             deps.as_mut(),
             env,
             mock_info("stranger", &[]),
-            wrap_and_send_msg(0u128),
+            craft_wrap_and_send_msg(0u128),
         )
         .unwrap_err();
         assert_eq!(
@@ -93,7 +80,7 @@ mod funds {
             deps.as_mut(),
             env,
             mock_info("stranger", &[coin(200, "denom1")]),
-            wrap_and_send_msg(0u128),
+            craft_wrap_and_send_msg(0u128),
         )
         .unwrap_err();
         assert_eq!(
@@ -110,7 +97,7 @@ mod funds {
             deps.as_mut(),
             env,
             mock_info("stranger", &[coin(200, "denom1"), coin(300, "denom2")]),
-            wrap_and_send_msg(0u128),
+            craft_wrap_and_send_msg(0u128),
         )
         .unwrap_err();
         assert_eq!(
@@ -130,7 +117,7 @@ mod funds {
                 "stranger",
                 &[coin(200, "bridged_denom"), coin(300, "denom2")],
             ),
-            wrap_and_send_msg(0u128),
+            craft_wrap_and_send_msg(0u128),
         )
         .unwrap_err();
         assert_eq!(
@@ -147,7 +134,7 @@ mod funds {
             deps.as_mut(),
             env,
             mock_info("stranger", &[coin(200, "bridged_denom")]),
-            wrap_and_send_msg(300u128),
+            craft_wrap_and_send_msg(300u128),
         )
         .unwrap();
         assert_eq!(response.messages.len(), 1);
@@ -178,7 +165,7 @@ fn success() {
         deps.as_mut(),
         env,
         mock_info("stranger", &[coin(300, "bridged_denom")]),
-        wrap_and_send_msg(100u128),
+        craft_wrap_and_send_msg(100u128),
     )
     .unwrap();
     assert_eq!(response.messages.len(), 1);
@@ -192,18 +179,5 @@ fn success() {
     );
     assert_eq!(response.attributes, vec![attr("action", "wrap_and_send")]);
     let wrap_and_send_context = WRAP_AND_SEND_CONTEXT.load(deps.as_mut().storage).unwrap();
-    assert_eq!(
-        wrap_and_send_context,
-        WrapAndSendContext {
-            source_port: "source_port".to_string(),
-            source_channel: "source_channel".to_string(),
-            receiver: "receiver".to_string(),
-            astroport_swap_operations: vec![],
-            refund_address: Addr::unchecked("refund_address"),
-            amount_to_wrap: coin(300, "bridged_denom"),
-            amount_to_send: coin(200, "canonical_denom"),
-            amount_to_swap_for_ibc_fee: coin(100, "canonical_denom"),
-            ibc_fee_denom: "ibc_fee_denom".to_string(),
-        }
-    );
+    assert_eq!(wrap_and_send_context, craft_wrap_and_send_context());
 }

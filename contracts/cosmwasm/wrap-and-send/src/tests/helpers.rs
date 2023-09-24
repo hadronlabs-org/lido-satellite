@@ -1,12 +1,13 @@
 use crate::{
     contract::instantiate,
-    msg::InstantiateMsg,
-    state::{Config, CONFIG},
+    msg::{ExecuteMsg, InstantiateMsg},
+    state::{Config, WrapAndSendContext, CONFIG},
     ContractResult,
 };
 use cosmwasm_std::{
+    coin,
     testing::{mock_env, mock_info, MockApi, MockStorage},
-    Addr, Deps, Env, OwnedDeps, Querier, Response,
+    Addr, Deps, Env, OwnedDeps, Querier, Response, Uint128,
 };
 use neutron_sdk::bindings::{msg::NeutronMsg, query::NeutronQuery};
 use std::marker::PhantomData;
@@ -51,4 +52,30 @@ pub fn assert_config(deps: Deps<NeutronQuery>, lido_satellite: &str, astroport_r
             astroport_router: Addr::unchecked(astroport_router),
         }
     )
+}
+
+pub fn craft_wrap_and_send_msg(amount_to_swap_for_ibc_fee: impl Into<Uint128>) -> ExecuteMsg {
+    ExecuteMsg::WrapAndSend {
+        source_port: "source_port".to_string(),
+        source_channel: "source_channel".to_string(),
+        receiver: "receiver".to_string(),
+        amount_to_swap_for_ibc_fee: amount_to_swap_for_ibc_fee.into(),
+        ibc_fee_denom: "ibc_fee_denom".to_string(),
+        astroport_swap_operations: vec![],
+        refund_address: "refund_address".to_string(),
+    }
+}
+
+pub fn craft_wrap_and_send_context() -> WrapAndSendContext {
+    WrapAndSendContext {
+        source_port: "source_port".to_string(),
+        source_channel: "source_channel".to_string(),
+        receiver: "receiver".to_string(),
+        astroport_swap_operations: vec![],
+        refund_address: Addr::unchecked("refund_address"),
+        amount_to_wrap: coin(300, "bridged_denom"),
+        amount_to_send: coin(200, "canonical_denom"),
+        amount_to_swap_for_ibc_fee: coin(100, "canonical_denom"),
+        ibc_fee_denom: "ibc_fee_denom".to_string(),
+    }
 }

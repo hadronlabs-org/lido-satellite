@@ -43,6 +43,7 @@ pub(crate) fn reply_lido_satellite_wrap(
         // This means we can safely ignore reply response
         SubMsgResult::Ok(_response) => {
             let ibc_fee = {
+                // FIXME: can this query ever fail?
                 let mut fee = query_min_ibc_fee(deps.as_ref())?.min_fee;
                 // fee.recv_fee is always empty
                 fee.ack_fee
