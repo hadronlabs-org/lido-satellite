@@ -44,7 +44,7 @@ impl Querier for CustomMockQuerier {
 }
 
 #[test]
-fn lido_satellite_wrap_failed() {
+fn fail() {
     let (_result, mut deps, env) =
         instantiate_wrapper::<MockQuerier>("lido_satellite", "astroport_router");
     WRAP_AND_SEND_CONTEXT
