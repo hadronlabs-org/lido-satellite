@@ -1,13 +1,15 @@
 use crate::{
     contract::execute,
     state::WRAP_AND_SEND_CONTEXT,
-    tests::helpers::{craft_wrap_and_send_context, craft_wrap_and_send_msg, instantiate_wrapper},
+    tests::helpers::{
+        bin_request_to_query_request, craft_wrap_and_send_context, craft_wrap_and_send_msg,
+        instantiate_wrapper,
+    },
     ContractError,
 };
 use cosmwasm_std::{
-    attr, coin, coins, from_slice, testing::mock_info, to_binary, BankMsg, ContractResult,
-    CosmosMsg, Empty, Querier, QuerierResult, QueryRequest, SystemError, SystemResult, WasmMsg,
-    WasmQuery,
+    attr, coin, coins, testing::mock_info, to_binary, BankMsg, ContractResult, CosmosMsg, Empty,
+    Querier, QuerierResult, QueryRequest, SystemResult, WasmMsg, WasmQuery,
 };
 use lido_satellite::{
     error::ContractError as LidoSatelliteError,
@@ -22,14 +24,9 @@ struct CustomMockQuerier {}
 
 impl Querier for CustomMockQuerier {
     fn raw_query(&self, bin_request: &[u8]) -> QuerierResult {
-        let request: QueryRequest<Empty> = match from_slice(bin_request) {
+        let request = match bin_request_to_query_request::<Empty>(bin_request) {
             Ok(v) => v,
-            Err(e) => {
-                return QuerierResult::Err(SystemError::InvalidRequest {
-                    error: format!("Parsing query request: {}", e),
-                    request: bin_request.into(),
-                })
-            }
+            Err(e) => return e,
         };
         match request {
             QueryRequest::Wasm(query) => match query {

@@ -4,10 +4,12 @@ use crate::{
     state::{Config, WrapAndSendContext, CONFIG},
     ContractResult,
 };
+use cosmwasm_schema::serde::de::DeserializeOwned;
 use cosmwasm_std::{
-    coin,
+    coin, from_slice,
     testing::{mock_env, mock_info, MockApi, MockStorage},
-    Addr, Deps, Env, OwnedDeps, Querier, Response, Uint128,
+    Addr, Deps, Env, OwnedDeps, Querier, QuerierResult, QueryRequest, Response, SystemError,
+    Uint128,
 };
 use neutron_sdk::bindings::{msg::NeutronMsg, query::NeutronQuery};
 use std::marker::PhantomData;
@@ -78,4 +80,15 @@ pub fn craft_wrap_and_send_context() -> WrapAndSendContext {
         amount_to_swap_for_ibc_fee: coin(100, "canonical_denom"),
         ibc_fee_denom: "ibc_fee_denom".to_string(),
     }
+}
+
+pub fn bin_request_to_query_request<T: DeserializeOwned>(
+    bin_request: &[u8],
+) -> Result<QueryRequest<T>, QuerierResult> {
+    from_slice::<QueryRequest<T>>(bin_request).map_err(move |err| {
+        QuerierResult::Err(SystemError::InvalidRequest {
+            error: format!("Parsing query request: {}", err),
+            request: bin_request.into(),
+        })
+    })
 }

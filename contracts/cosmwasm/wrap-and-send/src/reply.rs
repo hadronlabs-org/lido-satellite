@@ -44,12 +44,13 @@ pub(crate) fn reply_lido_satellite_wrap(
         SubMsgResult::Ok(_response) => {
             let ibc_fee = {
                 // FIXME: can this query ever fail?
+                // FIXME: can this query ever return empty response or even invalid response?
                 let mut fee = query_min_ibc_fee(deps.as_ref())?.min_fee;
                 // fee.recv_fee is always empty
                 fee.ack_fee
-                    .retain(|coin| coin.denom == context.amount_to_swap_for_ibc_fee.denom);
+                    .retain(|coin| coin.denom == context.ibc_fee_denom);
                 fee.timeout_fee
-                    .retain(|coin| coin.denom == context.amount_to_swap_for_ibc_fee.denom);
+                    .retain(|coin| coin.denom == context.ibc_fee_denom);
                 fee
             };
             IBC_FEE.save(deps.storage, &ibc_fee)?;
