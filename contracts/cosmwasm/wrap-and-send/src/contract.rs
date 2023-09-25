@@ -2,7 +2,7 @@ use crate::{
     execute::execute_wrap_and_send,
     msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg},
     query::query_config,
-    reply::{reply_astroport_swap, reply_lido_satellite_wrap},
+    reply::{reply_astroport_swap, reply_ibc_transfer, reply_lido_satellite_wrap},
     state::{Config, CONFIG},
     ContractError, ContractResult,
 };
@@ -15,6 +15,7 @@ pub const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 pub(crate) const LIDO_SATELLITE_WRAP_REPLY_ID: u64 = 1;
 pub(crate) const ASTROPORT_SWAP_REPLY_ID: u64 = 2;
+pub(crate) const IBC_TRANSFER_REPLY_ID: u64 = 3;
 
 #[cfg_attr(not(feature = "library"), cosmwasm_std::entry_point)]
 pub fn instantiate(
@@ -96,6 +97,7 @@ pub fn reply(
     match msg.id {
         LIDO_SATELLITE_WRAP_REPLY_ID => reply_lido_satellite_wrap(deps, env, msg.result),
         ASTROPORT_SWAP_REPLY_ID => reply_astroport_swap(deps, env, msg.result),
+        IBC_TRANSFER_REPLY_ID => reply_ibc_transfer(deps, env, msg.result),
         id => Err(ContractError::UnknownReplyId { id }),
     }
 }

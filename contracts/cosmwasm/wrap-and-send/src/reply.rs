@@ -1,14 +1,18 @@
 use crate::{
-    contract::ASTROPORT_SWAP_REPLY_ID,
-    state::{CONFIG, IBC_FEE, WRAP_AND_SEND_CONTEXT},
+    contract::{ASTROPORT_SWAP_REPLY_ID, IBC_TRANSFER_REPLY_ID},
+    state::{IbcTransferInfo, CONFIG, IBC_FEE, IBC_TRANSFER_INFO, WRAP_AND_SEND_CONTEXT},
     ContractResult,
 };
 use astroport::router::ExecuteMsg::ExecuteSwapOperations as AstroportExecuteSwapOperations;
 use cosmwasm_std::{
-    attr, coin, to_binary, BankMsg, DepsMut, Env, Response, SubMsg, SubMsgResult, WasmMsg,
+    attr, coin, from_binary, to_binary, BankMsg, DepsMut, Env, Response, SubMsg, SubMsgResult,
+    WasmMsg,
 };
 use neutron_sdk::{
-    bindings::{msg::NeutronMsg, query::NeutronQuery},
+    bindings::{
+        msg::{MsgIbcTransferResponse, NeutronMsg},
+        query::NeutronQuery,
+    },
     query::min_ibc_fee::query_min_ibc_fee,
     sudo::msg::RequestPacketTimeoutHeight,
 };
@@ -132,7 +136,6 @@ pub(crate) fn reply_astroport_swap(
                 ),
             };
 
-            // TODO: save IBC transfer data so we can handle sudo callbacks later
             let timeout_timestamp = env.block.time.plus_minutes(20).nanos();
             let ibc_transfer = NeutronMsg::IbcTransfer {
                 source_port: context.source_port.clone(),
@@ -150,24 +153,26 @@ pub(crate) fn reply_astroport_swap(
                 fee: ibc_fee,
             };
 
-            let mut response = Response::new().add_message(ibc_transfer).add_attributes([
-                attr("subaction", "astroport_router_swap"),
-                attr("swapped_amount", fee_balance.amount),
-                attr("subaction", "perform_ibc_transfer"),
-                attr("source_port", context.source_port),
-                attr("source_channel", context.source_channel),
-                attr(
-                    "token",
-                    format!(
-                        "{}{}",
-                        context.amount_to_send.amount, context.amount_to_send.denom
+            let mut response = Response::new()
+                .add_submessage(SubMsg::reply_always(ibc_transfer, IBC_TRANSFER_REPLY_ID))
+                .add_attributes([
+                    attr("subaction", "astroport_router_swap"),
+                    attr("swapped_amount", fee_balance.amount),
+                    attr("subaction", "perform_ibc_transfer"),
+                    attr("source_port", context.source_port),
+                    attr("source_channel", context.source_channel),
+                    attr(
+                        "token",
+                        format!(
+                            "{}{}",
+                            context.amount_to_send.amount, context.amount_to_send.denom
+                        ),
                     ),
-                ),
-                attr("sender", env.contract.address.into_string()),
-                attr("receiver", context.receiver),
-                attr("timeout_height", "null"),
-                attr("timeout_timestamp", timeout_timestamp.to_string()),
-            ]);
+                    attr("sender", env.contract.address.into_string()),
+                    attr("receiver", context.receiver),
+                    attr("timeout_height", "null"),
+                    attr("timeout_timestamp", timeout_timestamp.to_string()),
+                ]);
 
             if let Some(refund) = refund {
                 let refund = coin(refund.u128(), context.ibc_fee_denom);
@@ -183,6 +188,61 @@ pub(crate) fn reply_astroport_swap(
             }
 
             Ok(response)
+        }
+    }
+}
+
+pub(crate) fn reply_ibc_transfer(
+    deps: DepsMut<NeutronQuery>,
+    _env: Env,
+    result: SubMsgResult,
+) -> ContractResult<Response<NeutronMsg>> {
+    // Step 4.
+    // Handle immediate reply from IBC transfer module
+    // On failure: refund canonical funds and IBC fees back to user
+    // On success: store sequence_id and channel to handle IBC callback later
+
+    let context = WRAP_AND_SEND_CONTEXT.load(deps.storage)?;
+    let ibc_fee = IBC_FEE.load(deps.storage)?;
+
+    match result {
+        // I ignore this error string since I am not sure how to propogate it
+        // and inserting it into attributes doesn't sound right at all
+        SubMsgResult::Err(_e) => Ok(Response::new()
+            .add_message(BankMsg::Send {
+                to_address: context.refund_address.into_string(),
+                amount: vec![
+                    context.amount_to_send,
+                    coin(
+                        (ibc_fee.ack_fee[0].amount + ibc_fee.timeout_fee[0].amount).u128(),
+                        context.ibc_fee_denom,
+                    ),
+                ],
+            })
+            .add_attributes([
+                attr("action", "cancel_wrap_and_send"),
+                attr("reason", "ibc_transfer_failed"),
+            ])),
+        SubMsgResult::Ok(response) => {
+            // IBC transfer module always sets reply data on success:
+            // https://github.com/neutron-org/neutron/blob/v1.0.4/x/transfer/keeper/keeper.go#L27-L62
+            // hence I can easily use `Option::unwrap()` here
+            let data = response.data.unwrap();
+            let response: MsgIbcTransferResponse = from_binary(&data)?;
+            // TODO: write sudo handler to use this data later
+            IBC_TRANSFER_INFO.save(
+                deps.storage,
+                (response.sequence_id, &response.channel),
+                &IbcTransferInfo {
+                    refund_address: context.refund_address,
+                    ibc_fee,
+                },
+            )?;
+            Ok(Response::new().add_attributes([
+                attr("subaction", "ibc_transfer"),
+                attr("sequence_id", response.sequence_id.to_string()),
+                attr("channel", response.channel),
+            ]))
         }
     }
 }

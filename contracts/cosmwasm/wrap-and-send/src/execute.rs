@@ -22,8 +22,8 @@ pub(crate) fn execute_wrap_and_send(
     deps: DepsMut<NeutronQuery>,
     _env: Env,
     info: MessageInfo,
-    source_port: String,    // TODO: what if this port doesn't exist?
-    source_channel: String, // TODO: what if this channel doesn't exist?
+    source_port: String,
+    source_channel: String,
     receiver: String,
     amount_to_swap_for_ibc_fee: Uint128, // TODO: what if it is zero?
     ibc_fee_denom: String,               // TODO: what if this denom is invalid?
