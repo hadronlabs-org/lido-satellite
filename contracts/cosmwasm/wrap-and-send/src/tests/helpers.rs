@@ -1,17 +1,23 @@
 use crate::{
     contract::instantiate,
     msg::{ExecuteMsg, InstantiateMsg},
-    state::{Config, WrapAndSendContext, CONFIG},
+    state::{Config, IbcTransferInfo, WrapAndSendContext, CONFIG, IBC_TRANSFER_INFO},
     ContractResult,
 };
 use cosmwasm_schema::serde::de::DeserializeOwned;
 use cosmwasm_std::{
-    coin, from_slice,
+    coin, coins, from_slice,
     testing::{mock_env, mock_info, MockApi, MockStorage},
-    Addr, Deps, Env, OwnedDeps, Querier, QuerierResult, QueryRequest, Response, SystemError,
-    Uint128,
+    Addr, Deps, DepsMut, Env, OwnedDeps, Querier, QuerierResult, QueryRequest, Response,
+    SystemError, Uint128,
 };
-use neutron_sdk::bindings::{msg::NeutronMsg, query::NeutronQuery};
+use neutron_sdk::{
+    bindings::{
+        msg::{IbcFee, NeutronMsg},
+        query::NeutronQuery,
+    },
+    sudo::msg::RequestPacket,
+};
 use std::marker::PhantomData;
 
 #[allow(clippy::type_complexity)]
@@ -80,6 +86,38 @@ pub fn craft_wrap_and_send_context() -> WrapAndSendContext {
         amount_to_swap_for_ibc_fee: coin(100, "canonical_denom"),
         ibc_fee_denom: "ibc_fee_denom".to_string(),
     }
+}
+
+pub fn craft_request_packet() -> RequestPacket {
+    // almost all fields are set to None since we don't access them anyway
+    RequestPacket {
+        sequence: Some(4),
+        source_port: None,
+        source_channel: Some("chan".to_string()),
+        destination_port: None,
+        destination_channel: None,
+        data: None,
+        timeout_height: None,
+        timeout_timestamp: None,
+    }
+}
+
+pub fn prepare_ibc_transfer_info(deps: DepsMut<NeutronQuery>) {
+    IBC_TRANSFER_INFO
+        .save(
+            deps.storage,
+            (4, "chan"),
+            &IbcTransferInfo {
+                refund_address: Addr::unchecked("refund_address"),
+                ibc_fee: IbcFee {
+                    recv_fee: vec![],
+                    ack_fee: coins(20, "ibc_fee_denom"),
+                    timeout_fee: coins(30, "ibc_fee_denom"),
+                },
+                sent_amount: coin(500, "canonical_denom"),
+            },
+        )
+        .unwrap();
 }
 
 pub fn bin_request_to_query_request<T: DeserializeOwned>(

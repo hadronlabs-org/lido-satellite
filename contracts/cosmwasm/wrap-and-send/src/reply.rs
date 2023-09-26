@@ -73,6 +73,8 @@ pub(crate) fn reply_lido_satellite_wrap(
             };
 
             Ok(Response::new()
+                // FIXME: possible reentrance attack: if Astroport Router calls us, it will
+                //        override our temporary state which we use between reply() calls
                 .add_submessage(SubMsg::reply_always(swap_msg, ASTROPORT_SWAP_REPLY_ID))
                 .add_attributes([attr("subaction", "lido_satellite_wrap")]))
         }
@@ -229,13 +231,13 @@ pub(crate) fn reply_ibc_transfer(
             // hence I can easily use `Option::unwrap()` here
             let data = response.data.unwrap();
             let response: MsgIbcTransferResponse = from_binary(&data)?;
-            // TODO: write sudo handler to use this data later
             IBC_TRANSFER_INFO.save(
                 deps.storage,
                 (response.sequence_id, &response.channel),
                 &IbcTransferInfo {
                     refund_address: context.refund_address,
                     ibc_fee,
+                    sent_amount: context.amount_to_send,
                 },
             )?;
             Ok(Response::new().add_attributes([

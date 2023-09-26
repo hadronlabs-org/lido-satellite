@@ -4,11 +4,15 @@ use crate::{
     query::query_config,
     reply::{reply_astroport_swap, reply_ibc_transfer, reply_lido_satellite_wrap},
     state::{Config, CONFIG},
+    sudo::{sudo_error, sudo_response, sudo_timeout},
     ContractError, ContractResult,
 };
 use cosmwasm_std::{attr, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response};
 use cw2::set_contract_version;
-use neutron_sdk::bindings::{msg::NeutronMsg, query::NeutronQuery};
+use neutron_sdk::{
+    bindings::{msg::NeutronMsg, query::NeutronQuery},
+    sudo::msg::SudoMsg,
+};
 
 pub const CONTRACT_NAME: &str = env!("CARGO_PKG_NAME");
 pub const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -99,5 +103,18 @@ pub fn reply(
         ASTROPORT_SWAP_REPLY_ID => reply_astroport_swap(deps, env, msg.result),
         IBC_TRANSFER_REPLY_ID => reply_ibc_transfer(deps, env, msg.result),
         id => Err(ContractError::UnknownReplyId { id }),
+    }
+}
+
+pub fn sudo(
+    deps: DepsMut<NeutronQuery>,
+    env: Env,
+    msg: SudoMsg,
+) -> ContractResult<Response<NeutronMsg>> {
+    match msg {
+        SudoMsg::Response { request, data } => sudo_response(deps, env, request, data),
+        SudoMsg::Error { request, details } => sudo_error(deps, env, request, details),
+        SudoMsg::Timeout { request } => sudo_timeout(deps, env, request),
+        _ => Ok(Response::new()),
     }
 }

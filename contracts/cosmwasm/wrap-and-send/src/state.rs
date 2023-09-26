@@ -31,6 +31,7 @@ pub const IBC_FEE: Item<IbcFee> = Item::new("ibc_fee");
 pub struct IbcTransferInfo {
     pub refund_address: Addr,
     pub ibc_fee: IbcFee,
+    pub sent_amount: Coin,
 }
 
 pub const IBC_TRANSFER_INFO: Map<

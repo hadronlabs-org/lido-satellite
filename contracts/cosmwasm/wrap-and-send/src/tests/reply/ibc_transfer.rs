@@ -1,11 +1,11 @@
 use crate::{
     contract::{reply, IBC_TRANSFER_REPLY_ID},
-    state::{IBC_FEE, WRAP_AND_SEND_CONTEXT},
+    state::{IbcTransferInfo, IBC_FEE, IBC_TRANSFER_INFO, WRAP_AND_SEND_CONTEXT},
     tests::helpers::{craft_wrap_and_send_context, instantiate_wrapper},
 };
 use cosmwasm_std::{
-    attr, coin, coins, testing::MockQuerier, to_binary, BankMsg, CosmosMsg, Reply, SubMsgResponse,
-    SubMsgResult,
+    attr, coin, coins, testing::MockQuerier, to_binary, Addr, BankMsg, CosmosMsg, Reply,
+    SubMsgResponse, SubMsgResult,
 };
 use neutron_sdk::bindings::msg::{IbcFee, MsgIbcTransferResponse};
 
@@ -97,5 +97,20 @@ fn success() {
             attr("sequence_id", "7"),
             attr("channel", "some_channel"),
         ]
+    );
+    let ibc_transfer_info = IBC_TRANSFER_INFO
+        .load(deps.as_mut().storage, (7, "some_channel"))
+        .unwrap();
+    assert_eq!(
+        ibc_transfer_info,
+        IbcTransferInfo {
+            refund_address: Addr::unchecked("refund_address"),
+            ibc_fee: IbcFee {
+                recv_fee: vec![],
+                ack_fee: coins(20, "ibc_fee_denom"),
+                timeout_fee: coins(30, "ibc_fee_denom"),
+            },
+            sent_amount: coin(200, "canonical_denom"),
+        }
     );
 }
