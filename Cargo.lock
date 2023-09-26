@@ -557,6 +557,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "mock-astroport-router"
+version = "0.1.0"
+dependencies = [
+ "astroport",
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw2 1.1.0",
+ "thiserror",
+]
+
+[[package]]
 name = "neutron-sdk"
 version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"

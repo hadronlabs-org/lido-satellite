@@ -1,0 +1,19 @@
+[package]
+name = "mock-astroport-router"
+version = "0.1.0"
+description = "Mocked version of Astroport Router, used for integration tests only"
+edition = { workspace = true }
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[features]
+backtraces = ["cosmwasm-std/backtraces"]
+library = []
+
+[dependencies]
+cosmwasm-schema = { workspace = true }
+cosmwasm-std = { workspace = true }
+cw2 = { workspace = true }
+thiserror = { workspace = true }
+astroport = { workspace = true }

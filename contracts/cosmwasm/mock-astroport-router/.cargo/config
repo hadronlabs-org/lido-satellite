@@ -1,0 +1,2 @@
+[alias]
+schema = "run --bin mock-astroport-router-schema"
