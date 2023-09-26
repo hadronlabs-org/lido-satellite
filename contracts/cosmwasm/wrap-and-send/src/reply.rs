@@ -150,6 +150,7 @@ pub(crate) fn reply_astroport_swap(
                     revision_height: None,
                 },
                 // 20 minutes should be enough for IBC transfer to go through
+                // FIXME: maybe better allow user to set their own timeout?
                 timeout_timestamp,
                 memo: "".to_string(),
                 fee: ibc_fee,
