@@ -106,6 +106,7 @@ pub fn reply(
     }
 }
 
+#[cfg_attr(not(feature = "library"), cosmwasm_std::entry_point)]
 pub fn sudo(
     deps: DepsMut<NeutronQuery>,
     env: Env,
