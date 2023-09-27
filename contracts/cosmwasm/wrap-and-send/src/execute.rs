@@ -25,10 +25,9 @@ pub(crate) fn execute_wrap_and_send(
     source_port: String,
     source_channel: String,
     receiver: String,
-    amount_to_swap_for_ibc_fee: Uint128, // TODO: what if it is zero?
-    ibc_fee_denom: String,               // TODO: what if this denom is invalid?
-    astroport_swap_operations: Vec<SwapOperation>, // TODO: what if there are no operations?
-    //                                                TODO: what if it swaps for a wrong coin?
+    amount_to_swap_for_ibc_fee: Uint128,
+    ibc_fee_denom: String,
+    astroport_swap_operations: Vec<SwapOperation>,
     refund_address: String,
 ) -> ContractResult<Response<NeutronMsg>> {
     // Step 1.

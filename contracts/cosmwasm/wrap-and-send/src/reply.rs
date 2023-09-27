@@ -47,8 +47,6 @@ pub(crate) fn reply_lido_satellite_wrap(
         // This means we can safely ignore reply response
         SubMsgResult::Ok(_response) => {
             let ibc_fee = {
-                // FIXME: can this query ever fail?
-                // FIXME: can this query ever return empty response or even invalid response?
                 let mut fee = query_min_ibc_fee(deps.as_ref())?.min_fee;
                 // fee.recv_fee is always empty
                 fee.ack_fee
@@ -97,7 +95,6 @@ pub(crate) fn reply_astroport_swap(
     match result {
         // I ignore this error string since I am not sure how to propogate it
         // and inserting it into attributes doesn't sound right at all
-        // FIXME: what if, since we don't revert tx, funds get stuck on Astroport Router?
         SubMsgResult::Err(_e) => Ok(Response::new()
             .add_message(BankMsg::Send {
                 to_address: context.refund_address.into_string(),
