@@ -236,7 +236,7 @@ refund_address="$(neutrond tx wasm instantiate "$wrap_and_send_code_id" "$msg" -
 echo "Refund address: $refund_address"
 
 echo
-echo "Ideal scenario: mint 1000wATOM, swap 300wATOM for IBC fee, send 700wATOM to Gaia"
+echo "Ideal scenario: mint 1000wATOM, swap 300wATOM for IBC fee (and receive exactly as many as needed), send 700wATOM to Gaia"
 msg="$(printf '{
   "wrap_and_send": {
     "source_port": "transfer",
@@ -254,6 +254,8 @@ assert_balance_neutron "$astroport_router_contract_address" "factory/$lido_satel
 assert_balance_neutron "$astroport_router_contract_address" "untrn" "98000"
 assert_balance_neutron "$lido_satellite_contract_address" "$ATOM_ON_NEUTRON_IBC_DENOM" "3500"
 assert_balance_neutron "$wrap_and_send_contract_address" "untrn" "0"
+assert_balance_neutron "$wrap_and_send_contract_address" "factory/$lido_satellite_contract_address/wATOM" "0"
+assert_balance_neutron "$wrap_and_send_contract_address" "$ATOM_ON_NEUTRON_IBC_DENOM" "0"
 
 echo -n "Waiting 10 seconds for IBC transfer to complete"
 # shellcheck disable=SC2034
@@ -268,3 +270,37 @@ watom_on_gaia_ibc_denom="ibc/$(printf 'transfer/channel-0/factory/%s/wATOM' "$li
 assert_balance_neutron "$refund_address" "untrn" "1000"
 assert_balance_neutron "$lido_satellite_contract_address" "$ATOM_ON_NEUTRON_IBC_DENOM" "3500"
 assert_balance_gaia "$MAIN_WALLET_ADDR_GAIA" "$watom_on_gaia_ibc_denom" "700"
+
+echo
+echo "Sunny day scenario: mint 1500wATOM, swap 400wATOM for IBC fee (and receive more than needed), send 1100wATOM to Gaia"
+msg="$(printf '{
+  "wrap_and_send": {
+    "source_port": "transfer",
+    "source_channel": "channel-0",
+    "receiver": "%s",
+    "amount_to_swap_for_ibc_fee": "400",
+    "ibc_fee_denom": "untrn",
+    "astroport_swap_operations": [{"native_swap":{"offer_denom": "%s", "ask_denom":"untrn"}}],
+    "refund_address": "%s"
+  }
+}' "$MAIN_WALLET_ADDR_GAIA" "factory/$lido_satellite_contract_address/wATOM" "$refund_address")"
+neutrond tx wasm execute "$wrap_and_send_contract_address" "$msg" --amount "1500$ATOM_ON_NEUTRON_IBC_DENOM" --from "$MAIN_WALLET" "${ntx[@]}" | wait_ntx | assert_success
+assert_balance_neutron "$refund_address" "untrn" "1334"
+assert_balance_neutron "$astroport_router_contract_address" "factory/$lido_satellite_contract_address/wATOM" "700"
+assert_balance_neutron "$astroport_router_contract_address" "untrn" "95666"
+assert_balance_neutron "$lido_satellite_contract_address" "$ATOM_ON_NEUTRON_IBC_DENOM" "5000"
+assert_balance_neutron "$wrap_and_send_contract_address" "untrn" "0"
+assert_balance_neutron "$wrap_and_send_contract_address" "factory/$lido_satellite_contract_address/wATOM" "0"
+assert_balance_neutron "$wrap_and_send_contract_address" "$ATOM_ON_NEUTRON_IBC_DENOM" "0"
+
+echo -n "Waiting 10 seconds for IBC transfer to complete"
+# shellcheck disable=SC2034
+for i in $(seq 10); do
+  sleep 1
+  echo -n .
+done
+echo " done"
+
+assert_balance_neutron "$refund_address" "untrn" "2334"
+assert_balance_neutron "$lido_satellite_contract_address" "$ATOM_ON_NEUTRON_IBC_DENOM" "5000"
+assert_balance_gaia "$MAIN_WALLET_ADDR_GAIA" "$watom_on_gaia_ibc_denom" "1800"
