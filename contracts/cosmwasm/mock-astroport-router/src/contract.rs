@@ -41,19 +41,7 @@ pub fn execute(
             minimum_receive,
             to,
             max_spread,
-        } => {
-            let res = execute_swap_operations(
-                &deps,
-                env,
-                info,
-                operations,
-                minimum_receive,
-                to,
-                max_spread,
-            );
-            deps.api.debug(&format!("WASMDEBUG: res: {:?}", &res));
-            res
-        }
+        } => execute_swap_operations(deps, env, info, operations, minimum_receive, to, max_spread),
         _ => unimplemented!(),
     }
 }

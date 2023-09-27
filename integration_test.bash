@@ -35,7 +35,7 @@ ATOM_ON_NEUTRON_IBC_DENOM="ibc/27394FB092D2ECCD56123C74F36E4C1F926001CEADA9CA97E
 declare -a ntx=(
   "--home" "$NEUTRON_HOME"
   "--keyring-backend" "test"
-  "--broadcast-mode" "block"
+  "--broadcast-mode" "sync"
   "--gas" "10000000"
   "--gas-prices" "0.0025untrn"
   "--node" "$NEUTRON_NODE"
@@ -47,7 +47,7 @@ declare -a ntx=(
 declare -a gtx=(
   "--home" "$GAIA_HOME"
   "--keyring-backend" "test"
-  "--broadcast-mode" "block"
+  "--broadcast-mode" "sync"
   "--gas" "10000000"
   "--gas-prices" "0.0025uatom"
   "--node" "$GAIA_NODE"
@@ -68,6 +68,32 @@ declare -a gq=(
 
 select_attr() {
   printf '.logs[0].events[] | select(.type == "%s").attributes[] | select(.key == "%s").value' "$1" "$2"
+}
+
+wait_gtx() {
+  wait_tx "gaiad" "gq"
+}
+
+wait_ntx() {
+  wait_tx "neutrond" "nq"
+}
+
+wait_tx() {
+  local aname
+  local q
+  local txhash
+  local attempts
+  aname="$2[@]"
+  q=("${!aname}")
+  txhash="$(jq -r '.txhash' </dev/stdin)"
+  ((attempts=50))
+  while ! "$1" query tx --type=hash "$txhash" "${q[@]}" 2>/dev/null; do
+    ((attempts=attempts-1)) || {
+      echo "tx $txhash still not included in block" 1>&2
+      exit 1
+    }
+    sleep 0.1
+  done
 }
 
 assert_success() {
@@ -111,8 +137,8 @@ assert_balance_gaia() {
 }
 
 echo -n "Prepare IBC funds…"
-gaiad tx ibc-transfer transfer "transfer" "channel-0" "$MAIN_WALLET_ADDR_NEUTRON" 20000uatom --from demowallet1 "${gtx[@]}" | assert_success
-gaiad tx ibc-transfer transfer "transfer" "channel-0" "$SECOND_WALLET_ADDR_NEUTRON" 10000uatom --from demowallet1 "${gtx[@]}" | assert_success
+gaiad tx ibc-transfer transfer "transfer" "channel-0" "$MAIN_WALLET_ADDR_NEUTRON" 20000uatom --from demowallet1 "${gtx[@]}" | wait_gtx | assert_success
+gaiad tx ibc-transfer transfer "transfer" "channel-0" "$SECOND_WALLET_ADDR_NEUTRON" 10000uatom --from demowallet1 "${gtx[@]}" | wait_gtx | assert_success
 echo " done"
 
 echo -n "Waiting 10 seconds for IBC transfers to complete"
@@ -126,27 +152,27 @@ main_balance_before="$(get_balance_neutron "$MAIN_WALLET_ADDR_NEUTRON" "$ATOM_ON
 second_balance_before="$(get_balance_neutron "$SECOND_WALLET_ADDR_NEUTRON" "$ATOM_ON_NEUTRON_IBC_DENOM")"
 
 echo
-lido_satellite_code_id="$(neutrond tx wasm store "$LIDO_SATELLITE_PATH" --from "$MAIN_WALLET" "${ntx[@]}" | jq -r "$(select_attr "store_code" "code_id")")"
+lido_satellite_code_id="$(neutrond tx wasm store "$LIDO_SATELLITE_PATH" --from "$MAIN_WALLET" "${ntx[@]}" | wait_ntx | jq -r "$(select_attr "store_code" "code_id")")"
 echo "Lido Satellite Code ID: $lido_satellite_code_id"
 msg="$(printf '{"bridged_denom":"%s","canonical_subdenom":"wATOM"}' "$ATOM_ON_NEUTRON_IBC_DENOM")"
-lido_satellite_contract_address="$(neutrond tx wasm instantiate "$lido_satellite_code_id" "$msg" --amount 1000000untrn --no-admin --label lido_satellite --from "$MAIN_WALLET" "${ntx[@]}" | jq -r "$(select_attr "instantiate" "_contract_address")")"
+lido_satellite_contract_address="$(neutrond tx wasm instantiate "$lido_satellite_code_id" "$msg" --amount 1000000untrn --no-admin --label lido_satellite --from "$MAIN_WALLET" "${ntx[@]}" | wait_ntx | jq -r "$(select_attr "instantiate" "_contract_address")")"
 echo "Lido Satellite Contract address: $lido_satellite_contract_address"
 
 echo
 echo "Mint 1000 wATOM to main account"
-neutrond tx wasm execute "$lido_satellite_contract_address" '{"mint":{}}' --amount "1000$ATOM_ON_NEUTRON_IBC_DENOM" --from "$MAIN_WALLET" "${ntx[@]}" | assert_success
+neutrond tx wasm execute "$lido_satellite_contract_address" '{"mint":{}}' --amount "1000$ATOM_ON_NEUTRON_IBC_DENOM" --from "$MAIN_WALLET" "${ntx[@]}" | wait_ntx | assert_success
 assert_balance_neutron "$MAIN_WALLET_ADDR_NEUTRON" "factory/$lido_satellite_contract_address/wATOM" "1000"
 assert_balance_neutron "$lido_satellite_contract_address" "$ATOM_ON_NEUTRON_IBC_DENOM" "1000"
 
 echo
 echo "Mint 2000 more wATOM to main account"
-neutrond tx wasm execute "$lido_satellite_contract_address" '{"mint":{}}' --amount "2000$ATOM_ON_NEUTRON_IBC_DENOM" --from "$MAIN_WALLET" "${ntx[@]}" | assert_success
+neutrond tx wasm execute "$lido_satellite_contract_address" '{"mint":{}}' --amount "2000$ATOM_ON_NEUTRON_IBC_DENOM" --from "$MAIN_WALLET" "${ntx[@]}" | wait_ntx | assert_success
 assert_balance_neutron "$MAIN_WALLET_ADDR_NEUTRON" "factory/$lido_satellite_contract_address/wATOM" "3000"
 assert_balance_neutron "$lido_satellite_contract_address" "$ATOM_ON_NEUTRON_IBC_DENOM" "3000"
 
 echo
 echo "Mint 1500 wATOM to second account"
-neutrond tx wasm execute "$lido_satellite_contract_address" '{"mint":{}}' --amount "1500$ATOM_ON_NEUTRON_IBC_DENOM" --from "$SECOND_WALLET" "${ntx[@]}" | assert_success
+neutrond tx wasm execute "$lido_satellite_contract_address" '{"mint":{}}' --amount "1500$ATOM_ON_NEUTRON_IBC_DENOM" --from "$SECOND_WALLET" "${ntx[@]}" | wait_ntx | assert_success
 assert_balance_neutron "$MAIN_WALLET_ADDR_NEUTRON" "factory/$lido_satellite_contract_address/wATOM" "3000"
 assert_balance_neutron "$SECOND_WALLET_ADDR_NEUTRON" "factory/$lido_satellite_contract_address/wATOM" "1500"
 assert_balance_neutron "$lido_satellite_contract_address" "$ATOM_ON_NEUTRON_IBC_DENOM" "4500"
@@ -154,21 +180,21 @@ assert_balance_neutron "$lido_satellite_contract_address" "$ATOM_ON_NEUTRON_IBC_
 echo
 echo "Burn 200 wATOM from main account and send $ATOM_ON_NEUTRON_IBC_DENOM to second account"
 msg="$(printf '{"burn":{"receiver":"%s"}}' "$SECOND_WALLET_ADDR_NEUTRON")"
-neutrond tx wasm execute "$lido_satellite_contract_address" "$msg" --amount "200factory/$lido_satellite_contract_address/wATOM" --from "$MAIN_WALLET" "${ntx[@]}" | assert_success
+neutrond tx wasm execute "$lido_satellite_contract_address" "$msg" --amount "200factory/$lido_satellite_contract_address/wATOM" --from "$MAIN_WALLET" "${ntx[@]}" | wait_ntx | assert_success
 assert_balance_neutron "$MAIN_WALLET_ADDR_NEUTRON" "factory/$lido_satellite_contract_address/wATOM" "2800"
 assert_balance_neutron "$SECOND_WALLET_ADDR_NEUTRON" "factory/$lido_satellite_contract_address/wATOM" "1500"
 assert_balance_neutron "$lido_satellite_contract_address" "$ATOM_ON_NEUTRON_IBC_DENOM" "4300"
 
 echo
 echo "Send 300 wATOM from main account to second account"
-neutrond tx bank send "$MAIN_WALLET" "$SECOND_WALLET_ADDR_NEUTRON" "300factory/$lido_satellite_contract_address/wATOM" "${ntx[@]}" | assert_success
+neutrond tx bank send "$MAIN_WALLET" "$SECOND_WALLET_ADDR_NEUTRON" "300factory/$lido_satellite_contract_address/wATOM" "${ntx[@]}" | wait_ntx | assert_success
 assert_balance_neutron "$MAIN_WALLET_ADDR_NEUTRON" "factory/$lido_satellite_contract_address/wATOM" "2500"
 assert_balance_neutron "$SECOND_WALLET_ADDR_NEUTRON" "factory/$lido_satellite_contract_address/wATOM" "1800"
 assert_balance_neutron "$lido_satellite_contract_address" "$ATOM_ON_NEUTRON_IBC_DENOM" "4300"
 
 echo
 echo "Burn 1800 wATOM from second account"
-neutrond tx wasm execute "$lido_satellite_contract_address" '{"burn":{}}' --amount "1800factory/$lido_satellite_contract_address/wATOM" --from "$SECOND_WALLET" "${ntx[@]}" | assert_success
+neutrond tx wasm execute "$lido_satellite_contract_address" '{"burn":{}}' --amount "1800factory/$lido_satellite_contract_address/wATOM" --from "$SECOND_WALLET" "${ntx[@]}" | wait_ntx | assert_success
 assert_balance_neutron "$MAIN_WALLET_ADDR_NEUTRON" "factory/$lido_satellite_contract_address/wATOM" "2500"
 assert_balance_neutron "$SECOND_WALLET_ADDR_NEUTRON" "factory/$lido_satellite_contract_address/wATOM" "0"
 assert_balance_neutron "$lido_satellite_contract_address" "$ATOM_ON_NEUTRON_IBC_DENOM" "2500"
@@ -194,19 +220,19 @@ else
 fi
 
 echo
-astroport_router_code_id="$(neutrond tx wasm store "$ASTROPORT_ROUTER_PATH" --from "$MAIN_WALLET" "${ntx[@]}" | jq -r "$(select_attr "store_code" "code_id")")"
+astroport_router_code_id="$(neutrond tx wasm store "$ASTROPORT_ROUTER_PATH" --from "$MAIN_WALLET" "${ntx[@]}" | wait_ntx | jq -r "$(select_attr "store_code" "code_id")")"
 echo "Astroport Router Code ID: $astroport_router_code_id"
 msg="$(printf '{"offer_denom":"%s","ask_denom":"untrn"}' "factory/$lido_satellite_contract_address/wATOM")"
-astroport_router_contract_address="$(neutrond tx wasm instantiate "$astroport_router_code_id" "$msg" --amount 10000000untrn --no-admin --label mock_astroport_router --from "$MAIN_WALLET" "${ntx[@]}" | jq -r "$(select_attr "instantiate" "_contract_address")")"
+astroport_router_contract_address="$(neutrond tx wasm instantiate "$astroport_router_code_id" "$msg" --amount 100000untrn --no-admin --label mock_astroport_router --from "$MAIN_WALLET" "${ntx[@]}" | wait_ntx | jq -r "$(select_attr "instantiate" "_contract_address")")"
 echo "Astroport Router Contract address: $astroport_router_contract_address"
-wrap_and_send_code_id="$(neutrond tx wasm store "$WRAP_AND_SEND_PATH" --from "$MAIN_WALLET" "${ntx[@]}" | jq -r "$(select_attr "store_code" "code_id")")"
+wrap_and_send_code_id="$(neutrond tx wasm store "$WRAP_AND_SEND_PATH" --from "$MAIN_WALLET" "${ntx[@]}" | wait_ntx | jq -r "$(select_attr "store_code" "code_id")")"
 echo "Wrap and Send Code ID: $wrap_and_send_code_id"
 msg="$(printf '{"lido_satellite":"%s","astroport_router":"%s"}' "$lido_satellite_contract_address" "$astroport_router_contract_address")"
-wrap_and_send_contract_address="$(neutrond tx wasm instantiate "$wrap_and_send_code_id" "$msg" --no-admin --label wrap_and_send --from "$MAIN_WALLET" "${ntx[@]}" | jq -r "$(select_attr "instantiate" "_contract_address")")"
+wrap_and_send_contract_address="$(neutrond tx wasm instantiate "$wrap_and_send_code_id" "$msg" --no-admin --label wrap_and_send --from "$MAIN_WALLET" "${ntx[@]}" | wait_ntx | jq -r "$(select_attr "instantiate" "_contract_address")")"
 echo "Wrap and Send Contract address: $wrap_and_send_contract_address"
 
 # a very easy way in a shell script to create a random account is to spawn some contract :)))
-refund_address="$(neutrond tx wasm instantiate "$wrap_and_send_code_id" "$msg" --no-admin --label refund --from "$MAIN_WALLET" "${ntx[@]}" | jq -r "$(select_attr "instantiate" "_contract_address")")"
+refund_address="$(neutrond tx wasm instantiate "$wrap_and_send_code_id" "$msg" --no-admin --label refund --from "$MAIN_WALLET" "${ntx[@]}" | wait_ntx | jq -r "$(select_attr "instantiate" "_contract_address")")"
 echo "Refund address: $refund_address"
 
 echo
@@ -222,23 +248,23 @@ msg="$(printf '{
     "refund_address": "%s"
   }
 }' "$MAIN_WALLET_ADDR_GAIA" "factory/$lido_satellite_contract_address/wATOM" "$refund_address")"
-neutrond tx wasm execute "$wrap_and_send_contract_address" "$msg" --amount "1000$ATOM_ON_NEUTRON_IBC_DENOM" --from "$MAIN_WALLET" "${ntx[@]}" | assert_success
+neutrond tx wasm execute "$wrap_and_send_contract_address" "$msg" --amount "1000$ATOM_ON_NEUTRON_IBC_DENOM" --from "$MAIN_WALLET" "${ntx[@]}" | wait_ntx | assert_success
+assert_balance_neutron "$refund_address" "untrn" "0"
+assert_balance_neutron "$astroport_router_contract_address" "factory/$lido_satellite_contract_address/wATOM" "300"
+assert_balance_neutron "$astroport_router_contract_address" "untrn" "98000"
+assert_balance_neutron "$lido_satellite_contract_address" "$ATOM_ON_NEUTRON_IBC_DENOM" "3500"
+assert_balance_neutron "$wrap_and_send_contract_address" "untrn" "0"
 
-#assert_balance_neutron "$wrap_and_send_contract_address" "untrn" "0"
-#assert_balance_neutron "$lido_satellite_contract_address" "$ATOM_ON_NEUTRON_IBC_DENOM" "2700"
-#
-#echo
-#echo -n "Waiting 10 seconds for IBC transfer to complete"
-## shellcheck disable=SC2034
-#for i in $(seq 10); do
-#  sleep 1
-#  echo -n .
-#done
-#echo " done"
-#
-#watom_on_gaia_ibc_denom="ibc/$(printf 'transfer/channel-0/factory/%s/wATOM' "$lido_satellite_contract_address" \
-#  | sha256sum - | awk '{print $1}' | tr '[:lower:]' '[:upper:]')"
-#echo
-#assert_balance_neutron "$wrap_and_send_contract_address" "untrn" "1000"
-#assert_balance_neutron "$lido_satellite_contract_address" "$ATOM_ON_NEUTRON_IBC_DENOM" "2700"
-#assert_balance_gaia "$MAIN_WALLET_ADDR_GAIA" "$watom_on_gaia_ibc_denom" "200"
+echo -n "Waiting 10 seconds for IBC transfer to complete"
+# shellcheck disable=SC2034
+for i in $(seq 10); do
+  sleep 1
+  echo -n .
+done
+echo " done"
+
+watom_on_gaia_ibc_denom="ibc/$(printf 'transfer/channel-0/factory/%s/wATOM' "$lido_satellite_contract_address" \
+  | sha256sum - | awk '{print $1}' | tr '[:lower:]' '[:upper:]')"
+assert_balance_neutron "$refund_address" "untrn" "1000"
+assert_balance_neutron "$lido_satellite_contract_address" "$ATOM_ON_NEUTRON_IBC_DENOM" "3500"
+assert_balance_gaia "$MAIN_WALLET_ADDR_GAIA" "$watom_on_gaia_ibc_denom" "700"

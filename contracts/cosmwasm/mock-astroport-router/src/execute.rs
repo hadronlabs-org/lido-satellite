@@ -5,7 +5,7 @@ use cosmwasm_std::{
 };
 
 pub fn execute_swap_operations(
-    deps: &DepsMut,
+    deps: DepsMut,
     _env: Env,
     mut info: MessageInfo,
     mut operations: Vec<SwapOperation>,
@@ -13,14 +13,6 @@ pub fn execute_swap_operations(
     to: Option<String>,
     max_spread: Option<Decimal>,
 ) -> ContractResult<Response> {
-    deps.api
-        .debug(&format!("WASMDEBUG: operations: {:?}", &operations));
-    deps.api.debug(&format!(
-        "WASMDEBUG: minimum_receive: {:?}",
-        &minimum_receive
-    ));
-    deps.api.debug(&format!("WASMDEBUG: info: {:?}", &info));
-
     let config = CONFIG.load(deps.storage)?;
 
     assert_eq!(operations.len(), 1);
@@ -28,27 +20,19 @@ pub fn execute_swap_operations(
     assert_eq!(minimum_receive, Some(Uint128::new(2000)));
     assert!(to.is_none());
     assert!(max_spread.is_none());
-    deps.api.debug("WASMDEBUG: initial asserts passed");
 
     let operation = operations.pop().unwrap();
-    deps.api.debug("WASMDEBUG: operation extracted");
     match operation {
         SwapOperation::NativeSwap {
             offer_denom,
             ask_denom,
         } => {
-            deps.api.debug("WASMDEBUG: 0");
             assert_eq!(offer_denom, config.offer_denom);
-            deps.api.debug("WASMDEBUG: 1");
             assert_eq!(ask_denom, config.ask_denom);
-            deps.api.debug("WASMDEBUG: 2");
             assert_eq!(info.funds.len(), 1);
-            deps.api.debug("WASMDEBUG: secondary asserts passed");
 
             let funds = info.funds.pop().unwrap();
-            deps.api.debug("WASMDEBUG: funds extracted");
             assert_eq!(funds.denom, config.offer_denom);
-            deps.api.debug("WASMDEBUG: final asserts passed");
             match funds.amount.u128() {
                 100 => {
                     // swap fails
