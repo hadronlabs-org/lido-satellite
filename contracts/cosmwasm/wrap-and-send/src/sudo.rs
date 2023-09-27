@@ -7,10 +7,14 @@ use neutron_sdk::{
 
 pub fn sudo_response(
     deps: DepsMut<NeutronQuery>,
-    _env: Env,
+    env: Env,
     request: RequestPacket,
     _data: Binary,
 ) -> ContractResult<Response<NeutronMsg>> {
+    deps.api
+        .debug(&format!("WASMDEBUG: sudo_response({:?})", &request));
+    log_contract_balance(&deps, &env)?;
+
     let (sequence, source_channel) = extract_sequence_and_channel(request);
     let ibc_transfer_info = IBC_TRANSFER_INFO.load(deps.storage, (sequence, &source_channel))?;
 
@@ -20,6 +24,9 @@ pub fn sudo_response(
         amount: vec![refund.clone()],
     };
     IBC_TRANSFER_INFO.remove(deps.storage, (sequence, &source_channel));
+
+    deps.api
+        .debug(&format!("WASMDEBUG: refund: {:?}", &refund_msg));
 
     Ok(Response::new().add_message(refund_msg).add_attributes([
         attr("action", "ibc_ack"),
@@ -31,10 +38,14 @@ pub fn sudo_response(
 
 pub fn sudo_error(
     deps: DepsMut<NeutronQuery>,
-    _env: Env,
+    env: Env,
     request: RequestPacket,
     _details: String,
 ) -> ContractResult<Response<NeutronMsg>> {
+    deps.api
+        .debug(&format!("WASMDEBUG: sudo_error({:?})", &request));
+    log_contract_balance(&deps, &env)?;
+
     let (sequence, source_channel) = extract_sequence_and_channel(request);
     let ibc_transfer_info = IBC_TRANSFER_INFO.load(deps.storage, (sequence, &source_channel))?;
 
@@ -45,6 +56,9 @@ pub fn sudo_error(
         amount: vec![refund1.clone(), refund2.clone()],
     };
     IBC_TRANSFER_INFO.remove(deps.storage, (sequence, &source_channel));
+
+    deps.api
+        .debug(&format!("WASMDEBUG: refund: {:?}", &refund_msg));
 
     Ok(Response::new().add_message(refund_msg).add_attributes([
         attr("action", "ibc_ack"),
@@ -58,9 +72,13 @@ pub fn sudo_error(
 
 pub fn sudo_timeout(
     deps: DepsMut<NeutronQuery>,
-    _env: Env,
+    env: Env,
     request: RequestPacket,
 ) -> ContractResult<Response<NeutronMsg>> {
+    deps.api
+        .debug(&format!("WASMDEBUG: sudo_timeout({:?})", &request));
+    log_contract_balance(&deps, &env)?;
+
     let (sequence, source_channel) = extract_sequence_and_channel(request);
     let ibc_transfer_info = IBC_TRANSFER_INFO.load(deps.storage, (sequence, &source_channel))?;
 
@@ -71,6 +89,9 @@ pub fn sudo_timeout(
         amount: vec![refund1.clone(), refund2.clone()],
     };
     IBC_TRANSFER_INFO.remove(deps.storage, (sequence, &source_channel));
+
+    deps.api
+        .debug(&format!("WASMDEBUG: refund: {:?}", &refund_msg));
 
     Ok(Response::new().add_message(refund_msg).add_attributes([
         attr("action", "ibc_timeout"),
@@ -85,4 +106,11 @@ fn extract_sequence_and_channel(request: RequestPacket) -> (u64, String) {
     // we can safely call `Option::unwrap()` since these fields are always set:
     // https://github.com/cosmos/ibc-go/blob/v4.3.1/proto/ibc/core/channel/v1/channel.proto#L97-L104
     (request.sequence.unwrap(), request.source_channel.unwrap())
+}
+
+fn log_contract_balance(deps: &DepsMut<NeutronQuery>, env: &Env) -> ContractResult<()> {
+    let balances = deps.querier.query_all_balances(&env.contract.address)?;
+    deps.api
+        .debug(&format!("WASMDEBUG: my balance is {:?}", balances));
+    Ok(())
 }

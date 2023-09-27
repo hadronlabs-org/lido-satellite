@@ -1,6 +1,7 @@
 use crate::{
     execute::execute_swap_operations,
     msg::{ExecuteMsg, InstantiateMsg},
+    state::{Config, CONFIG},
     ContractResult,
 };
 use cosmwasm_std::{DepsMut, Env, MessageInfo, Response};
@@ -14,9 +15,16 @@ pub fn instantiate(
     deps: DepsMut,
     _env: Env,
     _info: MessageInfo,
-    _msg: InstantiateMsg,
+    msg: InstantiateMsg,
 ) -> ContractResult<Response> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
+
+    let config = Config {
+        offer_denom: msg.offer_denom,
+        ask_denom: msg.ask_denom,
+    };
+    CONFIG.save(deps.storage, &config)?;
+
     Ok(Response::new())
 }
 
@@ -33,7 +41,19 @@ pub fn execute(
             minimum_receive,
             to,
             max_spread,
-        } => execute_swap_operations(deps, env, info, operations, minimum_receive, to, max_spread),
+        } => {
+            let res = execute_swap_operations(
+                &deps,
+                env,
+                info,
+                operations,
+                minimum_receive,
+                to,
+                max_spread,
+            );
+            deps.api.debug(&format!("WASMDEBUG: res: {:?}", &res));
+            res
+        }
         _ => unimplemented!(),
     }
 }

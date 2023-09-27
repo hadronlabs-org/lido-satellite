@@ -17,6 +17,7 @@ finish() {
 trap finish EXIT
 
 LIDO_SATELLITE_PATH="artifacts/lido_satellite.wasm"
+ASTROPORT_ROUTER_PATH="artifacts/mock_astroport_router.wasm"
 WRAP_AND_SEND_PATH="artifacts/wrap_and_send.wasm"
 MAIN_WALLET="demowallet1"
 MAIN_WALLET_ADDR_NEUTRON="neutron1m9l358xunhhwds0568za49mzhvuxx9ux8xafx2"
@@ -192,19 +193,37 @@ else
   exit 1
 fi
 
-# Tests below will remain disabled until astroport router is mocked
+echo
+astroport_router_code_id="$(neutrond tx wasm store "$ASTROPORT_ROUTER_PATH" --from "$MAIN_WALLET" "${ntx[@]}" | jq -r "$(select_attr "store_code" "code_id")")"
+echo "Astroport Router Code ID: $astroport_router_code_id"
+msg="$(printf '{"offer_denom":"%s","ask_denom":"untrn"}' "factory/$lido_satellite_contract_address/wATOM")"
+astroport_router_contract_address="$(neutrond tx wasm instantiate "$astroport_router_code_id" "$msg" --amount 10000000untrn --no-admin --label mock_astroport_router --from "$MAIN_WALLET" "${ntx[@]}" | jq -r "$(select_attr "instantiate" "_contract_address")")"
+echo "Astroport Router Contract address: $astroport_router_contract_address"
+wrap_and_send_code_id="$(neutrond tx wasm store "$WRAP_AND_SEND_PATH" --from "$MAIN_WALLET" "${ntx[@]}" | jq -r "$(select_attr "store_code" "code_id")")"
+echo "Wrap and Send Code ID: $wrap_and_send_code_id"
+msg="$(printf '{"lido_satellite":"%s","astroport_router":"%s"}' "$lido_satellite_contract_address" "$astroport_router_contract_address")"
+wrap_and_send_contract_address="$(neutrond tx wasm instantiate "$wrap_and_send_code_id" "$msg" --no-admin --label wrap_and_send --from "$MAIN_WALLET" "${ntx[@]}" | jq -r "$(select_attr "instantiate" "_contract_address")")"
+echo "Wrap and Send Contract address: $wrap_and_send_contract_address"
 
-#echo
-#wrap_and_send_code_id="$(neutrond tx wasm store "$WRAP_AND_SEND_PATH" --from "$MAIN_WALLET" "${ntx[@]}" | jq -r "$(select_attr "store_code" "code_id")")"
-#echo "Wrap and Send Code ID: $wrap_and_send_code_id"
-#msg="$(printf '{"lido_satellite":"%s","ibc_fee_denom":"untrn"}' "$lido_satellite_contract_address")"
-#wrap_and_send_contract_address="$(neutrond tx wasm instantiate "$wrap_and_send_code_id" "$msg" --amount 2000untrn --no-admin --label wrap_and_send --from "$MAIN_WALLET" "${ntx[@]}" | jq -r "$(select_attr "instantiate" "_contract_address")")"
-#echo "Wrap and Send Contract address: $wrap_and_send_contract_address"
-#
-#echo
-#echo "Mint 200 wATOM and send to Gaia"
-#msg="$(printf '{"wrap_and_send":{"source_port":"transfer","source_channel":"channel-0","receiver":"%s"}}' "$MAIN_WALLET_ADDR_GAIA")"
-#neutrond tx wasm execute "$wrap_and_send_contract_address" "$msg" --amount "200$ATOM_ON_NEUTRON_IBC_DENOM" --from "$MAIN_WALLET" "${ntx[@]}" | assert_success
+# a very easy way in a shell script to create a random account is to spawn some contract :)))
+refund_address="$(neutrond tx wasm instantiate "$wrap_and_send_code_id" "$msg" --no-admin --label refund --from "$MAIN_WALLET" "${ntx[@]}" | jq -r "$(select_attr "instantiate" "_contract_address")")"
+echo "Refund address: $refund_address"
+
+echo
+echo "Ideal scenario: mint 1000wATOM, swap 300wATOM for IBC fee, send 700wATOM to Gaia"
+msg="$(printf '{
+  "wrap_and_send": {
+    "source_port": "transfer",
+    "source_channel": "channel-0",
+    "receiver": "%s",
+    "amount_to_swap_for_ibc_fee": "300",
+    "ibc_fee_denom": "untrn",
+    "astroport_swap_operations": [{"native_swap":{"offer_denom": "%s", "ask_denom":"untrn"}}],
+    "refund_address": "%s"
+  }
+}' "$MAIN_WALLET_ADDR_GAIA" "factory/$lido_satellite_contract_address/wATOM" "$refund_address")"
+neutrond tx wasm execute "$wrap_and_send_contract_address" "$msg" --amount "1000$ATOM_ON_NEUTRON_IBC_DENOM" --from "$MAIN_WALLET" "${ntx[@]}" | assert_success
+
 #assert_balance_neutron "$wrap_and_send_contract_address" "untrn" "0"
 #assert_balance_neutron "$lido_satellite_contract_address" "$ATOM_ON_NEUTRON_IBC_DENOM" "2700"
 #
