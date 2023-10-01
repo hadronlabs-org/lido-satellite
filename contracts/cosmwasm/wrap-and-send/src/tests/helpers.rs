@@ -1,7 +1,7 @@
 use crate::{
     contract::instantiate,
     msg::{ExecuteMsg, InstantiateMsg},
-    state::{Config, IbcTransferInfo, WrapAndSendContext, CONFIG, IBC_TRANSFER_INFO},
+    state::{Config, IbcTransferInfo, CONFIG, IBC_TRANSFER_INFO},
     ContractResult,
 };
 use cosmwasm_schema::serde::de::DeserializeOwned;
@@ -71,20 +71,6 @@ pub fn craft_wrap_and_send_msg(amount_to_swap_for_ibc_fee: impl Into<Uint128>) -
         ibc_fee_denom: "ibc_fee_denom".to_string(),
         astroport_swap_operations: vec![],
         refund_address: "refund_address".to_string(),
-    }
-}
-
-pub fn craft_wrap_and_send_context() -> WrapAndSendContext {
-    WrapAndSendContext {
-        source_port: "source_port".to_string(),
-        source_channel: "source_channel".to_string(),
-        receiver: "receiver".to_string(),
-        astroport_swap_operations: vec![],
-        refund_address: Addr::unchecked("refund_address"),
-        amount_to_wrap: coin(300, "bridged_denom"),
-        amount_to_send: coin(200, "canonical_denom"),
-        amount_to_swap_for_ibc_fee: coin(100, "canonical_denom"),
-        ibc_fee_denom: "ibc_fee_denom".to_string(),
     }
 }
 

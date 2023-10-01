@@ -1,0 +1,2 @@
+[alias]
+schema = "run --bin wrap-and-send-sentinel-schema"

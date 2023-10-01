@@ -1,6 +1,7 @@
 use astroport::router::SwapOperation;
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::Uint128;
+use cosmwasm_std::{Coin, Uint128};
+use neutron_sdk::bindings::msg::IbcFee;
 
 #[cw_serde]
 pub struct InstantiateMsg {
@@ -37,6 +38,16 @@ pub enum ExecuteMsg {
         /// receive canonical funds and result of swap on their specified refund address
         astroport_swap_operations: Vec<SwapOperation>,
         /// Address of user account on Neutron network which will be used for all refunds
+        refund_address: String,
+    },
+    /// Internal call, only contract itself can execute it. Users of a contract shall ignore and
+    /// never try to use it.
+    SwapCallback {
+        source_port: String,
+        source_channel: String,
+        receiver: String,
+        amount_to_send: Coin,
+        min_ibc_fee: IbcFee,
         refund_address: String,
     },
 }

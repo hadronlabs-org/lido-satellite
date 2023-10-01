@@ -19,6 +19,7 @@ trap finish EXIT
 LIDO_SATELLITE_PATH="artifacts/lido_satellite.wasm"
 ASTROPORT_ROUTER_PATH="artifacts/mock_astroport_router.wasm"
 WRAP_AND_SEND_PATH="artifacts/wrap_and_send.wasm"
+SENTINEL_PATH="artifacts/wrap_and_send_sentinel.wasm"
 MAIN_WALLET="demowallet1"
 MAIN_WALLET_ADDR_NEUTRON="neutron1m9l358xunhhwds0568za49mzhvuxx9ux8xafx2"
 MAIN_WALLET_ADDR_GAIA="cosmos1m9l358xunhhwds0568za49mzhvuxx9uxre5tud"
@@ -230,9 +231,14 @@ echo "Wrap and Send Code ID: $wrap_and_send_code_id"
 msg="$(printf '{"lido_satellite":"%s","astroport_router":"%s"}' "$lido_satellite_contract_address" "$astroport_router_contract_address")"
 wrap_and_send_contract_address="$(neutrond tx wasm instantiate "$wrap_and_send_code_id" "$msg" --no-admin --label wrap_and_send --from "$MAIN_WALLET" "${ntx[@]}" | wait_ntx | jq -r "$(select_attr "instantiate" "_contract_address")")"
 echo "Wrap and Send Contract address: $wrap_and_send_contract_address"
+sentinel_code_id="$(neutrond tx wasm store "$SENTINEL_PATH" --from "$MAIN_WALLET" "${ntx[@]}" | wait_ntx | jq -r "$(select_attr "store_code" "code_id")")"
+echo "Sentinel Code ID: $sentinel_code_id"
+msg="$(printf '{"wrap_and_send":"%s"}' "$wrap_and_send_contract_address")"
+sentinel_contract_address="$(neutrond tx wasm instantiate "$sentinel_code_id" "$msg" --no-admin --label sentinel --from "$MAIN_WALLET" "${ntx[@]}" | wait_ntx | jq -r "$(select_attr "instantiate" "_contract_address")")"
+echo "Sentinel Contract address: $sentinel_contract_address"
 
-# a very easy way in a shell script to create a random account is to spawn some contract :)))
-refund_address="$(neutrond tx wasm instantiate "$wrap_and_send_code_id" "$msg" --no-admin --label refund --from "$MAIN_WALLET" "${ntx[@]}" | wait_ntx | jq -r "$(select_attr "instantiate" "_contract_address")")"
+# a very easy way in a shell script to create a random account is to spawn some unused contract :)))
+refund_address="$(neutrond tx wasm instantiate "$sentinel_code_id" "$msg" --no-admin --label refund --from "$MAIN_WALLET" "${ntx[@]}" | wait_ntx | jq -r "$(select_attr "instantiate" "_contract_address")")"
 echo "Refund address: $refund_address"
 
 echo
@@ -248,14 +254,18 @@ msg="$(printf '{
     "refund_address": "%s"
   }
 }' "$MAIN_WALLET_ADDR_GAIA" "factory/$lido_satellite_contract_address/wATOM" "$refund_address")"
-neutrond tx wasm execute "$wrap_and_send_contract_address" "$msg" --amount "1000$ATOM_ON_NEUTRON_IBC_DENOM" --from "$MAIN_WALLET" "${ntx[@]}" | wait_ntx | assert_success
+neutrond tx wasm execute "$sentinel_contract_address" "$msg" --amount "1000$ATOM_ON_NEUTRON_IBC_DENOM" --from "$MAIN_WALLET" "${ntx[@]}" | wait_ntx | assert_success
 assert_balance_neutron "$refund_address" "untrn" "0"
 assert_balance_neutron "$astroport_router_contract_address" "factory/$lido_satellite_contract_address/wATOM" "300"
 assert_balance_neutron "$astroport_router_contract_address" "untrn" "98000"
 assert_balance_neutron "$lido_satellite_contract_address" "$ATOM_ON_NEUTRON_IBC_DENOM" "3500"
+# TODO: easy function to assert that account has absolutely zero money
 assert_balance_neutron "$wrap_and_send_contract_address" "untrn" "0"
 assert_balance_neutron "$wrap_and_send_contract_address" "factory/$lido_satellite_contract_address/wATOM" "0"
 assert_balance_neutron "$wrap_and_send_contract_address" "$ATOM_ON_NEUTRON_IBC_DENOM" "0"
+assert_balance_neutron "$sentinel_contract_address" "untrn" "0"
+assert_balance_neutron "$sentinel_contract_address" "factory/$lido_satellite_contract_address/wATOM" "0"
+assert_balance_neutron "$sentinel_contract_address" "$ATOM_ON_NEUTRON_IBC_DENOM" "0"
 
 echo -n "Waiting 10 seconds for IBC transfer to complete"
 # shellcheck disable=SC2034
@@ -270,6 +280,12 @@ watom_on_gaia_ibc_denom="ibc/$(printf 'transfer/channel-0/factory/%s/wATOM' "$li
 assert_balance_neutron "$refund_address" "untrn" "1000"
 assert_balance_neutron "$lido_satellite_contract_address" "$ATOM_ON_NEUTRON_IBC_DENOM" "3500"
 assert_balance_gaia "$MAIN_WALLET_ADDR_GAIA" "$watom_on_gaia_ibc_denom" "700"
+assert_balance_neutron "$wrap_and_send_contract_address" "untrn" "0"
+assert_balance_neutron "$wrap_and_send_contract_address" "factory/$lido_satellite_contract_address/wATOM" "0"
+assert_balance_neutron "$wrap_and_send_contract_address" "$ATOM_ON_NEUTRON_IBC_DENOM" "0"
+assert_balance_neutron "$sentinel_contract_address" "untrn" "0"
+assert_balance_neutron "$sentinel_contract_address" "factory/$lido_satellite_contract_address/wATOM" "0"
+assert_balance_neutron "$sentinel_contract_address" "$ATOM_ON_NEUTRON_IBC_DENOM" "0"
 
 echo
 echo "Sunny day scenario: mint 1500wATOM, swap 400wATOM for IBC fee (and receive more than needed), send 1100wATOM to Gaia"
@@ -284,7 +300,7 @@ msg="$(printf '{
     "refund_address": "%s"
   }
 }' "$MAIN_WALLET_ADDR_GAIA" "factory/$lido_satellite_contract_address/wATOM" "$refund_address")"
-neutrond tx wasm execute "$wrap_and_send_contract_address" "$msg" --amount "1500$ATOM_ON_NEUTRON_IBC_DENOM" --from "$MAIN_WALLET" "${ntx[@]}" | wait_ntx | assert_success
+neutrond tx wasm execute "$sentinel_contract_address" "$msg" --amount "1500$ATOM_ON_NEUTRON_IBC_DENOM" --from "$MAIN_WALLET" "${ntx[@]}" | wait_ntx | assert_success
 assert_balance_neutron "$refund_address" "untrn" "1334"
 assert_balance_neutron "$astroport_router_contract_address" "factory/$lido_satellite_contract_address/wATOM" "700"
 assert_balance_neutron "$astroport_router_contract_address" "untrn" "95666"
@@ -292,6 +308,9 @@ assert_balance_neutron "$lido_satellite_contract_address" "$ATOM_ON_NEUTRON_IBC_
 assert_balance_neutron "$wrap_and_send_contract_address" "untrn" "0"
 assert_balance_neutron "$wrap_and_send_contract_address" "factory/$lido_satellite_contract_address/wATOM" "0"
 assert_balance_neutron "$wrap_and_send_contract_address" "$ATOM_ON_NEUTRON_IBC_DENOM" "0"
+assert_balance_neutron "$sentinel_contract_address" "untrn" "0"
+assert_balance_neutron "$sentinel_contract_address" "factory/$lido_satellite_contract_address/wATOM" "0"
+assert_balance_neutron "$sentinel_contract_address" "$ATOM_ON_NEUTRON_IBC_DENOM" "0"
 
 echo -n "Waiting 10 seconds for IBC transfer to complete"
 # shellcheck disable=SC2034
@@ -304,6 +323,16 @@ echo " done"
 assert_balance_neutron "$refund_address" "untrn" "2334"
 assert_balance_neutron "$lido_satellite_contract_address" "$ATOM_ON_NEUTRON_IBC_DENOM" "5000"
 assert_balance_gaia "$MAIN_WALLET_ADDR_GAIA" "$watom_on_gaia_ibc_denom" "1800"
+assert_balance_neutron "$wrap_and_send_contract_address" "untrn" "0"
+assert_balance_neutron "$wrap_and_send_contract_address" "factory/$lido_satellite_contract_address/wATOM" "0"
+assert_balance_neutron "$wrap_and_send_contract_address" "$ATOM_ON_NEUTRON_IBC_DENOM" "0"
+assert_balance_neutron "$sentinel_contract_address" "untrn" "0"
+assert_balance_neutron "$sentinel_contract_address" "factory/$lido_satellite_contract_address/wATOM" "0"
+assert_balance_neutron "$sentinel_contract_address" "$ATOM_ON_NEUTRON_IBC_DENOM" "0"
+
+echo
+echo "TODO: Rainy day tests"
+exit 1
 
 echo
 echo "Impossible scenario: mint 600wATOM, swap 200wATOM for IBC fee (and receive less than expected)"
@@ -318,8 +347,8 @@ msg="$(printf '{
     "refund_address": "%s"
   }
 }' "$MAIN_WALLET_ADDR_GAIA" "factory/$lido_satellite_contract_address/wATOM" "$refund_address")"
-neutrond tx wasm execute "$wrap_and_send_contract_address" "$msg" --amount "600$ATOM_ON_NEUTRON_IBC_DENOM" --from "$MAIN_WALLET" "${ntx[@]}" | wait_ntx | assert_success
-assert_balance_neutron "$refund_address" "untrn" "3584"
+neutrond tx wasm execute "$sentinel_contract_address" "$msg" --amount "600$ATOM_ON_NEUTRON_IBC_DENOM" --from "$MAIN_WALLET" "${ntx[@]}" | wait_ntx | assert_success
+assert_balance_neutron "$refund_address" "untrn" "2334"
 assert_balance_neutron "$refund_address" "factory/$lido_satellite_contract_address/wATOM" "400"
 assert_balance_neutron "$astroport_router_contract_address" "factory/$lido_satellite_contract_address/wATOM" "900"
 assert_balance_neutron "$astroport_router_contract_address" "untrn" "94416"

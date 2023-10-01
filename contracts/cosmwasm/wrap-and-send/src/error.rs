@@ -1,21 +1,22 @@
-use cosmwasm_std::StdError;
-use lido_satellite::error::ContractError as LidoSatelliteError;
-use neutron_sdk::NeutronError;
-use thiserror::Error;
-
-#[derive(Error, Debug, PartialEq)]
+#[derive(thiserror::Error, Debug, PartialEq)]
 pub enum ContractError {
     #[error("{0}")]
-    Std(#[from] StdError),
+    Std(#[from] cosmwasm_std::StdError),
 
     #[error("{0}")]
-    NeutronError(#[from] NeutronError),
+    OverflowError(#[from] cosmwasm_std::OverflowError),
 
     #[error("{0}")]
-    LidoSatellite(#[from] LidoSatelliteError),
+    NeutronError(#[from] neutron_sdk::NeutronError),
 
-    #[error("this method is only callable by owner")]
-    Unauthorized {},
+    #[error("{0}")]
+    LidoSatellite(#[from] lido_satellite::error::ContractError),
+
+    #[error("this method is only callable by contract itself")]
+    InternalMethod {},
+
+    #[error("Astroport Router provided less funds than requested")]
+    SwappedForLessThanRequested {},
 
     #[error("unknown reply id: {id}")]
     UnknownReplyId { id: u64 },

@@ -1,8 +1,8 @@
 use crate::{
-    execute::execute_wrap_and_send,
+    execute::{execute_swap_callback, execute_wrap_and_send},
     msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg},
     query::query_config,
-    reply::{reply_astroport_swap, reply_ibc_transfer, reply_lido_satellite_wrap},
+    reply::reply_ibc_transfer,
     state::{Config, CONFIG},
     sudo::{sudo_error, sudo_response, sudo_timeout},
     ContractError, ContractResult,
@@ -17,9 +17,7 @@ use neutron_sdk::{
 pub const CONTRACT_NAME: &str = env!("CARGO_PKG_NAME");
 pub const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
-pub(crate) const LIDO_SATELLITE_WRAP_REPLY_ID: u64 = 1;
-pub(crate) const ASTROPORT_SWAP_REPLY_ID: u64 = 2;
-pub(crate) const IBC_TRANSFER_REPLY_ID: u64 = 3;
+pub(crate) const IBC_TRANSFER_REPLY_ID: u64 = 1;
 
 #[cfg_attr(not(feature = "library"), cosmwasm_std::entry_point)]
 pub fn instantiate(
@@ -73,6 +71,24 @@ pub fn execute(
             astroport_swap_operations,
             refund_address,
         ),
+        ExecuteMsg::SwapCallback {
+            source_port,
+            source_channel,
+            receiver,
+            amount_to_send,
+            min_ibc_fee,
+            refund_address,
+        } => execute_swap_callback(
+            deps,
+            env,
+            info,
+            source_port,
+            source_channel,
+            receiver,
+            amount_to_send,
+            min_ibc_fee,
+            refund_address,
+        ),
     }
 }
 
@@ -99,8 +115,6 @@ pub fn reply(
     msg: Reply,
 ) -> ContractResult<Response<NeutronMsg>> {
     match msg.id {
-        LIDO_SATELLITE_WRAP_REPLY_ID => reply_lido_satellite_wrap(deps, env, msg.result),
-        ASTROPORT_SWAP_REPLY_ID => reply_astroport_swap(deps, env, msg.result),
         IBC_TRANSFER_REPLY_ID => reply_ibc_transfer(deps, env, msg.result),
         id => Err(ContractError::UnknownReplyId { id }),
     }

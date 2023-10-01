@@ -1,4 +1,3 @@
-use astroport::router::SwapOperation;
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, Coin};
 use cw_storage_plus::{Item, Map};
@@ -12,28 +11,16 @@ pub struct Config {
 pub const CONFIG: Item<Config> = Item::new("config");
 
 #[cw_serde]
-pub struct WrapAndSendContext {
-    pub source_port: String,
-    pub source_channel: String,
-    pub receiver: String,
-    pub astroport_swap_operations: Vec<SwapOperation>,
-    pub refund_address: Addr,
-    pub amount_to_wrap: Coin,
-    pub amount_to_send: Coin,
-    pub amount_to_swap_for_ibc_fee: Coin,
-    pub ibc_fee_denom: String,
-}
-pub const WRAP_AND_SEND_CONTEXT: Item<WrapAndSendContext> = Item::new("wrap_and_send_context");
-
-pub const IBC_FEE: Item<IbcFee> = Item::new("ibc_fee");
-
-#[cw_serde]
 pub struct IbcTransferInfo {
     pub refund_address: Addr,
     pub ibc_fee: IbcFee,
     pub sent_amount: Coin,
 }
 
+// temporary state used to restore context after a call to IBC transfer module
+pub const IBC_TRANSFER_CONTEXT: Item<IbcTransferInfo> = Item::new("ibc_transfer_context");
+
+// persistent state used to refund failed IBC transfers and IBC fees
 pub const IBC_TRANSFER_INFO: Map<
     (
         u64,  // sequence_id
