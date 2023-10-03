@@ -288,11 +288,15 @@ assert_balance_neutron "$lido_satellite_contract_address" "$ATOM_ON_NEUTRON_IBC_
 assert_no_funds_neutron "$wrap_and_send_contract_address"
 assert_no_funds_neutron "$sentinel_contract_address"
 
-echo -n "Waiting 10 seconds for IBC transfer to complete"
-# shellcheck disable=SC2034
-for i in $(seq 10); do
-  sleep 1
-  echo -n .
+echo -n "Waiting for IBC transfer to complete"
+((attempts=200))
+while ! [[ "$(get_balance_neutron "$refund_address" "untrn")" -eq 1000 ]]; do
+  echo -n "."
+  ((attempts-=1)) || {
+    echo "seems like IBC transfer failed" 1>&2
+    exit 1
+  }
+  sleep 0.1
 done
 echo " done"
 
@@ -325,11 +329,15 @@ assert_balance_neutron "$lido_satellite_contract_address" "$ATOM_ON_NEUTRON_IBC_
 assert_no_funds_neutron "$wrap_and_send_contract_address"
 assert_no_funds_neutron "$sentinel_contract_address"
 
-echo -n "Waiting 10 seconds for IBC transfer to complete"
-# shellcheck disable=SC2034
-for i in $(seq 10); do
-  sleep 1
-  echo -n .
+echo -n "Waiting for IBC transfer to complete"
+((attempts=200))
+while ! [[ "$(get_balance_neutron "$refund_address" "untrn")" -eq 2334 ]]; do
+  echo -n "."
+  ((attempts-=1)) || {
+    echo "seems like IBC transfer failed" 1>&2
+    exit 1
+  }
+  sleep 0.1
 done
 echo " done"
 
