@@ -1,15 +1,14 @@
 use crate::{
     contract::sudo,
     state::IBC_TRANSFER_INFO,
-    tests::helpers::{craft_request_packet, instantiate_wrapper, prepare_ibc_transfer_info},
+    tests::helpers::{craft_request_packet, mock_instantiate, prepare_ibc_transfer_info},
 };
 use cosmwasm_std::{attr, coin, testing::MockQuerier, BankMsg, CosmosMsg};
 use neutron_sdk::sudo::msg::SudoMsg;
 
 #[test]
 fn test() {
-    let (_result, mut deps, env) =
-        instantiate_wrapper::<MockQuerier>("lido_satellite", "astroport_router");
+    let (mut deps, env) = mock_instantiate::<MockQuerier>();
     prepare_ibc_transfer_info(deps.as_mut());
     let response = sudo(
         deps.as_mut(),

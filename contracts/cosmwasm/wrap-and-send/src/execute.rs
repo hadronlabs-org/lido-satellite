@@ -11,12 +11,8 @@ use cosmwasm_std::{
     coin, to_binary, BankMsg, Coin, DepsMut, Env, MessageInfo, Response, SubMsg, Uint128, WasmMsg,
 };
 use lido_satellite::{
-    error::ContractError as LidoSatelliteContractError,
-    execute::find_denom,
-    msg::{
-        ConfigResponse as LidoSatelliteConfigResponse,
-        ExecuteMsg::Mint as LidoSatelliteExecuteMint, QueryMsg::Config as LidoSatelliteQueryConfig,
-    },
+    error::ContractError as LidoSatelliteContractError, execute::find_denom,
+    msg::ExecuteMsg::Mint as LidoSatelliteExecuteMint,
 };
 use neutron_sdk::{
     bindings::{
@@ -42,23 +38,18 @@ pub(crate) fn execute_wrap_and_send(
     refund_address: String,
 ) -> ContractResult<Response<NeutronMsg>> {
     let config = CONFIG.load(deps.storage)?;
-    let lido_satellite_config: LidoSatelliteConfigResponse = deps
-        .querier
-        .query_wasm_smart(&config.lido_satellite, &LidoSatelliteQueryConfig {})?;
 
-    let received_amount = find_denom(&info.funds, &lido_satellite_config.bridged_denom)?
+    let received_amount = find_denom(&info.funds, &config.bridged_denom)?
         .ok_or(LidoSatelliteContractError::NothingToMint {})?
         .amount;
     let amount_to_send = coin(
         received_amount
             .checked_sub(amount_to_swap_for_ibc_fee)?
             .u128(),
-        &lido_satellite_config.canonical_denom,
+        &config.canonical_denom,
     );
-    let amount_to_swap_for_ibc_fee = coin(
-        amount_to_swap_for_ibc_fee.u128(),
-        &lido_satellite_config.canonical_denom,
-    );
+    let amount_to_swap_for_ibc_fee =
+        coin(amount_to_swap_for_ibc_fee.u128(), &config.canonical_denom);
 
     // TODO: make it a method with a validation
     let min_ibc_fee = {

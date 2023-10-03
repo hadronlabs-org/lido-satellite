@@ -9,6 +9,9 @@ use crate::{
 };
 use cosmwasm_std::{attr, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response};
 use cw2::set_contract_version;
+use lido_satellite::msg::{
+    ConfigResponse as LidoSatelliteConfigResponse, QueryMsg::Config as LidoSatelliteQueryConfig,
+};
 use neutron_sdk::{
     bindings::{msg::NeutronMsg, query::NeutronQuery},
     sudo::msg::SudoMsg,
@@ -30,9 +33,16 @@ pub fn instantiate(
 
     let lido_satellite = deps.api.addr_validate(&msg.lido_satellite)?;
     let astroport_router = deps.api.addr_validate(&msg.astroport_router)?;
+
+    let lido_satellite_config: LidoSatelliteConfigResponse = deps
+        .querier
+        .query_wasm_smart(&lido_satellite, &LidoSatelliteQueryConfig {})?;
+
     let config = Config {
         lido_satellite,
         astroport_router,
+        bridged_denom: lido_satellite_config.bridged_denom,
+        canonical_denom: lido_satellite_config.canonical_denom,
     };
     CONFIG.save(deps.storage, &config)?;
 
@@ -40,6 +50,8 @@ pub fn instantiate(
         attr("action", "instantiate"),
         attr("lido_satellite", config.lido_satellite),
         attr("astroport_router", config.astroport_router),
+        attr("bridged_denom", config.bridged_denom),
+        attr("canonical_denom", config.canonical_denom),
     ]))
 }
 

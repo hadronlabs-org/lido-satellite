@@ -56,6 +56,8 @@ pub enum ExecuteMsg {
 pub struct ConfigResponse {
     pub lido_satellite: String,
     pub astroport_router: String,
+    pub bridged_denom: String,
+    pub canonical_denom: String,
 }
 
 #[cw_serde]

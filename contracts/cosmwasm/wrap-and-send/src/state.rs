@@ -7,6 +7,8 @@ use neutron_sdk::bindings::msg::IbcFee;
 pub struct Config {
     pub lido_satellite: Addr,
     pub astroport_router: Addr,
+    pub bridged_denom: String,
+    pub canonical_denom: String,
 }
 pub const CONFIG: Item<Config> = Item::new("config");
 

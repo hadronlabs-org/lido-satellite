@@ -1,5 +1,7 @@
-use crate::state::{FUNDS, REFUND_ADDRESS};
-use crate::ContractResult;
+use crate::{
+    state::{FUNDS, REFUND_ADDRESS},
+    ContractResult,
+};
 use cosmwasm_std::{BankMsg, DepsMut, Env, Response, SubMsgResult};
 
 pub fn reply_wrap_and_send(
@@ -13,6 +15,7 @@ pub fn reply_wrap_and_send(
         SubMsgResult::Err(_e) => {
             let refund_address = REFUND_ADDRESS.load(deps.storage)?;
             let funds = FUNDS.load(deps.storage)?;
+
             // TODO: attributes
             // TODO: wrap and refund
             Ok(Response::new().add_message(BankMsg::Send {

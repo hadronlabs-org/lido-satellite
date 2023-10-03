@@ -7,5 +7,7 @@ pub(crate) fn query_config(deps: Deps<NeutronQuery>) -> ContractResult<Binary> {
     Ok(to_binary(&ConfigResponse {
         lido_satellite: config.lido_satellite.into_string(),
         astroport_router: config.astroport_router.into_string(),
+        bridged_denom: config.bridged_denom,
+        canonical_denom: config.canonical_denom,
     })?)
 }

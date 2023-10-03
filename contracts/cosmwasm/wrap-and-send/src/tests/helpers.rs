@@ -1,34 +1,23 @@
 use crate::{
-    contract::instantiate,
-    msg::{ExecuteMsg, InstantiateMsg},
+    msg::ExecuteMsg,
     state::{Config, IbcTransferInfo, CONFIG, IBC_TRANSFER_INFO},
-    ContractResult,
 };
 use cosmwasm_schema::serde::de::DeserializeOwned;
 use cosmwasm_std::{
     coin, coins, from_slice,
-    testing::{mock_env, mock_info, MockApi, MockStorage},
-    Addr, Deps, DepsMut, Env, OwnedDeps, Querier, QuerierResult, QueryRequest, Response,
-    SystemError, Uint128,
+    testing::{mock_env, MockApi, MockStorage},
+    Addr, Deps, DepsMut, Env, OwnedDeps, Querier, QuerierResult, QueryRequest, SystemError,
+    Uint128,
 };
 use neutron_sdk::{
-    bindings::{
-        msg::{IbcFee, NeutronMsg},
-        query::NeutronQuery,
-    },
+    bindings::{msg::IbcFee, query::NeutronQuery},
     sudo::msg::RequestPacket,
 };
 use std::marker::PhantomData;
 
 #[allow(clippy::type_complexity)]
-pub fn instantiate_wrapper<Q: Querier + Default>(
-    lido_satellite: impl Into<String>,
-    astroport_router: impl Into<String>,
-) -> (
-    ContractResult<Response<NeutronMsg>>,
-    OwnedDeps<MockStorage, MockApi, Q, NeutronQuery>,
-    Env,
-) {
+pub fn mock_instantiate<Q: Querier + Default>(
+) -> (OwnedDeps<MockStorage, MockApi, Q, NeutronQuery>, Env) {
     let mut deps = OwnedDeps {
         storage: MockStorage::default(),
         api: MockApi::default(),
@@ -36,28 +25,35 @@ pub fn instantiate_wrapper<Q: Querier + Default>(
         custom_query_type: PhantomData,
     };
     let env = mock_env();
-    (
-        instantiate(
-            deps.as_mut(),
-            env.clone(),
-            mock_info("admin", &[]),
-            InstantiateMsg {
-                lido_satellite: lido_satellite.into(),
-                astroport_router: astroport_router.into(),
+    CONFIG
+        .save(
+            deps.as_mut().storage,
+            &Config {
+                lido_satellite: Addr::unchecked("lido_satellite".to_string()),
+                astroport_router: Addr::unchecked("astroport_router".to_string()),
+                bridged_denom: "bridged_denom".to_string(),
+                canonical_denom: "canonical_denom".into(),
             },
-        ),
-        deps,
-        env,
-    )
+        )
+        .unwrap();
+    (deps, env)
 }
 
-pub fn assert_config(deps: Deps<NeutronQuery>, lido_satellite: &str, astroport_router: &str) {
+pub fn assert_config(
+    deps: Deps<NeutronQuery>,
+    lido_satellite: &str,
+    astroport_router: &str,
+    bridged_denom: &str,
+    canonical_denom: &str,
+) {
     let config = CONFIG.load(deps.storage).unwrap();
     assert_eq!(
         config,
         Config {
             lido_satellite: Addr::unchecked(lido_satellite),
             astroport_router: Addr::unchecked(astroport_router),
+            bridged_denom: bridged_denom.to_string(),
+            canonical_denom: canonical_denom.to_string(),
         }
     )
 }

@@ -1,19 +1,91 @@
 use crate::{
     contract::execute,
-    tests::helpers::{bin_request_to_query_request, craft_wrap_and_send_msg, instantiate_wrapper},
+    msg::ExecuteMsg,
+    tests::helpers::{bin_request_to_query_request, craft_wrap_and_send_msg, mock_instantiate},
+};
+use astroport::router::{
+    ExecuteMsg::ExecuteSwapOperations as AstroportExecuteSwapOperations, SwapOperation,
 };
 use cosmwasm_std::{
-    coin, testing::mock_info, to_binary, ContractResult, Querier, QuerierResult, QueryRequest,
-    SystemResult, WasmQuery,
+    coin, coins,
+    testing::{mock_info, MockQuerier, MOCK_CONTRACT_ADDR},
+    to_binary, ContractResult, CosmosMsg, Querier, QuerierResult, QueryRequest, SystemResult,
+    Uint128, WasmMsg,
 };
-use lido_satellite::msg::{
-    ConfigResponse as LidoSatelliteQueryConfigResponse,
-    QueryMsg::Config as LidoSatelliteQueryConfig,
-};
+use lido_satellite::msg::ExecuteMsg::Mint as LidoSatelliteExecuteMint;
 use neutron_sdk::{
     bindings::{msg::IbcFee, query::NeutronQuery},
     query::min_ibc_fee::MinIbcFeeResponse,
 };
+
+// in these tests, we don't care about the actual error,
+// we only care that contact returns an error and reverts execution
+mod invalid_funds {
+    use super::*;
+
+    #[test]
+    fn no_funds() {
+        let (mut deps, env) = mock_instantiate::<MockQuerier>();
+        execute(
+            deps.as_mut(),
+            env,
+            mock_info("stranger", &[]),
+            craft_wrap_and_send_msg(0u128),
+        )
+        .unwrap_err();
+    }
+
+    #[test]
+    fn wrong_denom() {
+        let (mut deps, env) = mock_instantiate::<MockQuerier>();
+        execute(
+            deps.as_mut(),
+            env,
+            mock_info("stranger", &[coin(200, "denom1")]),
+            craft_wrap_and_send_msg(0u128),
+        )
+        .unwrap_err();
+    }
+
+    #[test]
+    fn all_wrong_denoms() {
+        let (mut deps, env) = mock_instantiate::<MockQuerier>();
+        execute(
+            deps.as_mut(),
+            env,
+            mock_info("stranger", &[coin(200, "denom1"), coin(300, "denom2")]),
+            craft_wrap_and_send_msg(0u128),
+        )
+        .unwrap_err();
+    }
+
+    #[test]
+    fn extra_denoms() {
+        let (mut deps, env) = mock_instantiate::<MockQuerier>();
+        execute(
+            deps.as_mut(),
+            env,
+            mock_info(
+                "stranger",
+                &[coin(200, "bridged_denom"), coin(300, "denom2")],
+            ),
+            craft_wrap_and_send_msg(0u128),
+        )
+        .unwrap_err();
+    }
+
+    #[test]
+    fn not_enough_for_ibc_fee() {
+        let (mut deps, env) = mock_instantiate::<MockQuerier>();
+        execute(
+            deps.as_mut(),
+            env,
+            mock_info("stranger", &[coin(200, "bridged_denom")]),
+            craft_wrap_and_send_msg(300u128),
+        )
+        .unwrap_err();
+    }
+}
 
 #[derive(Default)]
 struct CustomMockQuerier {}
@@ -25,21 +97,6 @@ impl Querier for CustomMockQuerier {
             Err(e) => return e,
         };
         match request {
-            QueryRequest::Wasm(query) => match query {
-                WasmQuery::Smart { contract_addr, msg } => {
-                    // we want to make sure that contract queries only Lido Satellite
-                    assert_eq!(contract_addr, "lido_satellite");
-                    // we also want to make sure it only asks for its config
-                    assert_eq!(msg, to_binary(&LidoSatelliteQueryConfig {}).unwrap());
-                    SystemResult::Ok(ContractResult::from(to_binary(
-                        &LidoSatelliteQueryConfigResponse {
-                            bridged_denom: "bridged_denom".to_string(),
-                            canonical_denom: "canonical_denom".to_string(),
-                        },
-                    )))
-                }
-                _ => unimplemented!(),
-            },
             QueryRequest::Custom(query) => match query {
                 NeutronQuery::MinIbcFee {} => {
                     SystemResult::Ok(ContractResult::from(to_binary(&MinIbcFeeResponse {
@@ -57,90 +114,72 @@ impl Querier for CustomMockQuerier {
     }
 }
 
-mod funds {
-    use super::*;
-
-    #[test]
-    fn no_funds() {
-        let (_result, mut deps, env) =
-            instantiate_wrapper::<CustomMockQuerier>("lido_satellite", "astroport_router");
-        execute(
-            deps.as_mut(),
-            env,
-            mock_info("stranger", &[]),
-            craft_wrap_and_send_msg(0u128),
-        )
-        .unwrap_err();
-    }
-
-    #[test]
-    fn wrong_denom() {
-        let (_result, mut deps, env) =
-            instantiate_wrapper::<CustomMockQuerier>("lido_satellite", "astroport_router");
-        execute(
-            deps.as_mut(),
-            env,
-            mock_info("stranger", &[coin(200, "denom1")]),
-            craft_wrap_and_send_msg(0u128),
-        )
-        .unwrap_err();
-    }
-
-    #[test]
-    fn all_wrong_denoms() {
-        let (_result, mut deps, env) =
-            instantiate_wrapper::<CustomMockQuerier>("lido_satellite", "astroport_router");
-        execute(
-            deps.as_mut(),
-            env,
-            mock_info("stranger", &[coin(200, "denom1"), coin(300, "denom2")]),
-            craft_wrap_and_send_msg(0u128),
-        )
-        .unwrap_err();
-    }
-
-    #[test]
-    fn extra_denoms() {
-        let (_result, mut deps, env) =
-            instantiate_wrapper::<CustomMockQuerier>("lido_satellite", "astroport_router");
-        execute(
-            deps.as_mut(),
-            env,
-            mock_info(
-                "stranger",
-                &[coin(200, "bridged_denom"), coin(300, "denom2")],
-            ),
-            craft_wrap_and_send_msg(0u128),
-        )
-        .unwrap_err();
-    }
-
-    #[test]
-    fn not_enough_for_ibc_fee() {
-        let (_result, mut deps, env) =
-            instantiate_wrapper::<CustomMockQuerier>("lido_satellite", "astroport_router");
-        execute(
-            deps.as_mut(),
-            env,
-            mock_info("stranger", &[coin(200, "bridged_denom")]),
-            craft_wrap_and_send_msg(300u128),
-        )
-        .unwrap_err();
-    }
-}
-
 #[test]
 fn success() {
-    let (_result, mut deps, env) =
-        instantiate_wrapper::<CustomMockQuerier>("lido_satellite", "astroport_router");
+    let (mut deps, env) = mock_instantiate::<CustomMockQuerier>();
     let response = execute(
         deps.as_mut(),
         env,
         mock_info("stranger", &[coin(300, "bridged_denom")]),
-        craft_wrap_and_send_msg(100u128),
+        ExecuteMsg::WrapAndSend {
+            source_port: "source_port".to_string(),
+            source_channel: "source_channel".to_string(),
+            receiver: "receiver".to_string(),
+            amount_to_swap_for_ibc_fee: Uint128::new(100),
+            ibc_fee_denom: "ibc_fee_denom".to_string(),
+            astroport_swap_operations: vec![SwapOperation::NativeSwap {
+                offer_denom: "canonical_denom".to_string(),
+                ask_denom: "ibc_fee_denom".to_string(),
+            }],
+            refund_address: "refund_address".to_string(),
+        },
     )
     .unwrap();
-    dbg!(response);
-    // TODO: there should be lots of messages, check them all
+    assert_eq!(response.messages.len(), 3);
+    assert_eq!(
+        response.messages[0].msg,
+        CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: "lido_satellite".to_string(),
+            msg: to_binary(&LidoSatelliteExecuteMint { receiver: None }).unwrap(),
+            funds: coins(300, "bridged_denom"),
+        })
+    );
+    assert_eq!(
+        response.messages[1].msg,
+        CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: "astroport_router".to_string(),
+            msg: to_binary(&AstroportExecuteSwapOperations {
+                operations: vec![SwapOperation::NativeSwap {
+                    offer_denom: "canonical_denom".to_string(),
+                    ask_denom: "ibc_fee_denom".to_string()
+                }],
+                minimum_receive: Some(Uint128::new(50)),
+                to: None,
+                max_spread: None,
+            })
+            .unwrap(),
+            funds: coins(100, "canonical_denom"),
+        })
+    );
+    assert_eq!(
+        response.messages[2].msg,
+        CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: MOCK_CONTRACT_ADDR.to_string(),
+            msg: to_binary(&ExecuteMsg::SwapCallback {
+                source_port: "source_port".to_string(),
+                source_channel: "source_channel".to_string(),
+                receiver: "receiver".to_string(),
+                amount_to_send: coin(200, "canonical_denom"),
+                min_ibc_fee: IbcFee {
+                    recv_fee: vec![],
+                    ack_fee: coins(20, "ibc_fee_denom"),
+                    timeout_fee: coins(30, "ibc_fee_denom"),
+                },
+                refund_address: "refund_address".to_string(),
+            })
+            .unwrap(),
+            funds: vec![],
+        })
+    );
     // TODO: check attributes as well
 }
