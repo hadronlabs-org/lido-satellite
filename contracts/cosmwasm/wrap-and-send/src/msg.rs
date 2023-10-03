@@ -13,6 +13,7 @@ pub struct InstantiateMsg {
 
 #[cw_serde]
 pub enum ExecuteMsg {
+    // FIXME: maybe this method should only be callable by sentinel?
     /// This method expects user to send bridged funds, which will be sent to Lido Satellite
     /// and locked in there. Lido Satellite will mint canonical funds in return, which will
     /// be sent further to another destination chain. This call also automatically swaps a small
