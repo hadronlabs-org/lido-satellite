@@ -7,9 +7,14 @@ pub struct InstantiateMsg {
     pub wrap_and_send: String,
 }
 
+// TODO: implement query()
+// TODO: implement test for this query
 #[cw_serde]
 pub struct ConfigResponse {
     pub wrap_and_send: String,
+    pub lido_satellite: String,
+    pub bridged_denom: String,
+    pub canonical_denom: String,
 }
 
 #[cw_serde]

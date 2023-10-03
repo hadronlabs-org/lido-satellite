@@ -3,13 +3,13 @@ use crate::{
     state::{CONFIG, FUNDS, REFUND_ADDRESS},
     ContractResult,
 };
-use cosmwasm_std::{to_binary, DepsMut, Env, MessageInfo, Response, SubMsg, WasmMsg};
+use cosmwasm_std::{to_binary, BankMsg, DepsMut, Env, MessageInfo, Response, SubMsg, WasmMsg};
 use wrap_and_send::msg::ExecuteMsg;
 
 pub fn execute_wrap_and_send(
     deps: DepsMut,
     _env: Env,
-    info: MessageInfo,
+    mut info: MessageInfo,
     msg: ExecuteMsg,
 ) -> ContractResult<Response> {
     let config = CONFIG.load(deps.storage)?;
@@ -19,12 +19,34 @@ pub fn execute_wrap_and_send(
         _ => unreachable!(),
     };
     REFUND_ADDRESS.save(deps.storage, &refund_address)?;
-    FUNDS.save(deps.storage, &info.funds)?;
+
+    let funds = match info.funds.len() {
+        1 => {
+            let funds = info.funds.pop().unwrap();
+            if funds.denom == config.bridged_denom {
+                funds
+            } else {
+                // TODO: attributes
+                return Ok(Response::new().add_message(BankMsg::Send {
+                    to_address: refund_address.into_string(),
+                    amount: vec![funds],
+                }));
+            }
+        }
+        _ => {
+            // TODO: attributes
+            return Ok(Response::new().add_message(BankMsg::Send {
+                to_address: refund_address.into_string(),
+                amount: info.funds,
+            }));
+        }
+    };
+    FUNDS.save(deps.storage, &funds)?;
 
     let msg = WasmMsg::Execute {
         contract_addr: config.wrap_and_send.into_string(),
         msg: to_binary(&msg)?,
-        funds: info.funds,
+        funds: vec![funds],
     };
 
     // TODO: attributes

@@ -33,7 +33,6 @@ pub fn instantiate(
 
     let lido_satellite = deps.api.addr_validate(&msg.lido_satellite)?;
     let astroport_router = deps.api.addr_validate(&msg.astroport_router)?;
-
     let lido_satellite_config: LidoSatelliteConfigResponse = deps
         .querier
         .query_wasm_smart(&lido_satellite, &LidoSatelliteQueryConfig {})?;

@@ -1052,6 +1052,7 @@ dependencies = [
  "cosmwasm-std",
  "cw-storage-plus 1.1.0",
  "cw2 1.1.0",
+ "lido-satellite",
  "thiserror",
  "wrap-and-send",
 ]

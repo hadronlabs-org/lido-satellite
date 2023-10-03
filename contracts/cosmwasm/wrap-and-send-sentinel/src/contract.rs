@@ -7,6 +7,9 @@ use crate::{
 };
 use cosmwasm_std::{DepsMut, Env, MessageInfo, Reply, Response};
 use cw2::set_contract_version;
+use wrap_and_send::msg::{
+    ConfigResponse as WrapAndSendConfigResponse, QueryMsg::Config as WrapAndSendQueryConfig,
+};
 
 pub const CONTRACT_NAME: &str = env!("CARGO_PKG_NAME");
 pub const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -22,8 +25,19 @@ pub fn instantiate(
 ) -> ContractResult<Response> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
+    let wrap_and_send = deps.api.addr_validate(&msg.wrap_and_send)?;
+    let wrap_and_send_config: WrapAndSendConfigResponse = deps
+        .querier
+        .query_wasm_smart(&wrap_and_send, &WrapAndSendQueryConfig {})?;
+    let lido_satellite = deps
+        .api
+        .addr_validate(&wrap_and_send_config.lido_satellite)?;
+
     let config = Config {
-        wrap_and_send: deps.api.addr_validate(&msg.wrap_and_send)?,
+        wrap_and_send,
+        lido_satellite,
+        bridged_denom: wrap_and_send_config.bridged_denom,
+        canonical_denom: wrap_and_send_config.canonical_denom,
     };
     CONFIG.save(deps.storage, &config)?;
 
