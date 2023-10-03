@@ -8,7 +8,8 @@ use astroport::router::{
     ExecuteMsg::ExecuteSwapOperations as AstroportExecuteSwapOperations, SwapOperation,
 };
 use cosmwasm_std::{
-    coin, to_binary, BankMsg, Coin, DepsMut, Env, MessageInfo, Response, SubMsg, Uint128, WasmMsg,
+    coin, to_binary, BankMsg, Coin, Deps, DepsMut, Env, MessageInfo, Response, SubMsg, Uint128,
+    WasmMsg,
 };
 use lido_satellite::{
     error::ContractError as LidoSatelliteContractError, execute::find_denom,
@@ -50,15 +51,7 @@ pub(crate) fn execute_wrap_and_send(
     );
     let amount_to_swap_for_ibc_fee =
         coin(amount_to_swap_for_ibc_fee.u128(), &config.canonical_denom);
-
-    // TODO: make it a method with a validation
-    let min_ibc_fee = {
-        let mut fee = query_min_ibc_fee(deps.as_ref())?.min_fee;
-        // fee.recv_fee is always empty
-        fee.ack_fee.retain(|coin| coin.denom == ibc_fee_denom);
-        fee.timeout_fee.retain(|coin| coin.denom == ibc_fee_denom);
-        fee
-    };
+    let min_ibc_fee = calculate_min_ibc_fee(deps.as_ref(), &ibc_fee_denom)?;
 
     let wrap_msg = WasmMsg::Execute {
         contract_addr: config.lido_satellite.into_string(),
@@ -166,4 +159,19 @@ pub(crate) fn execute_swap_callback(
     }
 
     Ok(response)
+}
+
+fn calculate_min_ibc_fee(deps: Deps<NeutronQuery>, ibc_fee_denom: &str) -> ContractResult<IbcFee> {
+    let mut fee = query_min_ibc_fee(deps)?.min_fee;
+    fee.ack_fee.retain(|coin| coin.denom == ibc_fee_denom);
+    fee.timeout_fee.retain(|coin| coin.denom == ibc_fee_denom);
+
+    if !fee.recv_fee.is_empty() || fee.ack_fee.len() != 1 || fee.timeout_fee.len() != 1 {
+        return Err(ContractError::MinIbcFee {});
+    }
+    if fee.ack_fee[0].amount.is_zero() || fee.timeout_fee[0].amount.is_zero() {
+        return Err(ContractError::MinIbcFee {});
+    }
+
+    Ok(fee)
 }

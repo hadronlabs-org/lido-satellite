@@ -20,6 +20,9 @@ pub enum ContractError {
 
     #[error("unknown reply id: {id}")]
     UnknownReplyId { id: u64 },
+
+    #[error("couldn't calculate minimum IBC fee")]
+    MinIbcFee {},
 }
 
 pub type ContractResult<T> = Result<T, ContractError>;
