@@ -28,7 +28,6 @@ pub fn execute_swap_operations(
             ask_denom,
         } => {
             assert_eq!(offer_denom, config.offer_denom);
-            assert_eq!(ask_denom, config.ask_denom);
             assert_eq!(info.funds.len(), 1);
 
             let funds = info.funds.pop().unwrap();
@@ -40,6 +39,7 @@ pub fn execute_swap_operations(
                 }
                 200 => {
                     // swap returns less than minimum_receive
+                    assert_eq!(ask_denom, config.ask_denom);
                     Ok(Response::new().add_message(BankMsg::Send {
                         to_address: info.sender.to_string(),
                         amount: coins(1250, config.ask_denom),
@@ -47,6 +47,7 @@ pub fn execute_swap_operations(
                 }
                 300 => {
                     // swap returns exactly minimum receive
+                    assert_eq!(ask_denom, config.ask_denom);
                     Ok(Response::new().add_message(BankMsg::Send {
                         to_address: info.sender.to_string(),
                         amount: coins(2000, config.ask_denom),
@@ -54,6 +55,7 @@ pub fn execute_swap_operations(
                 }
                 400 => {
                     // swap returns more than minimum receive
+                    assert_eq!(ask_denom, config.ask_denom);
                     Ok(Response::new().add_message(BankMsg::Send {
                         to_address: info.sender.to_string(),
                         amount: coins(2334, config.ask_denom),
@@ -61,6 +63,7 @@ pub fn execute_swap_operations(
                 }
                 500 => {
                     // swap returns invalid coin
+                    assert_eq!(ask_denom, config.ask_denom);
                     Ok(Response::new().add_message(BankMsg::Send {
                         to_address: info.sender.to_string(),
                         amount: coins(2500, "uibcatom"),
