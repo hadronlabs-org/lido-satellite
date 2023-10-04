@@ -13,6 +13,7 @@ pub(crate) fn reply_ibc_transfer(
     _env: Env,
     result: SubMsgResult,
 ) -> ContractResult<Response<NeutronMsg>> {
+    // TODO: rewrite these doc steps, they are outdated
     // Step 4.
     // Handle immediate reply from IBC transfer module
     // On failure: refund canonical funds and IBC fees back to user

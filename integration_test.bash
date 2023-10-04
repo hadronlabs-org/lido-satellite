@@ -368,6 +368,7 @@ assert_balance_neutron "$astroport_router_contract_address" "untrn" "95666"
 assert_balance_neutron "$lido_satellite_contract_address" "$ATOM_ON_NEUTRON_IBC_DENOM" "5600"
 assert_no_funds_neutron "$wrap_and_send_contract_address"
 assert_no_funds_neutron "$sentinel_contract_address"
+assert_balance_gaia "$MAIN_WALLET_ADDR_GAIA" "$watom_on_gaia_ibc_denom" "1800"
 
 echo
 echo "Rainy day scenario: mint 500wATOM, swap 100wATOM for IBC fee (swap will fail)"
@@ -390,6 +391,7 @@ assert_balance_neutron "$astroport_router_contract_address" "untrn" "95666"
 assert_balance_neutron "$lido_satellite_contract_address" "$ATOM_ON_NEUTRON_IBC_DENOM" "6100"
 assert_no_funds_neutron "$wrap_and_send_contract_address"
 assert_no_funds_neutron "$sentinel_contract_address"
+assert_balance_gaia "$MAIN_WALLET_ADDR_GAIA" "$watom_on_gaia_ibc_denom" "1800"
 
 echo
 echo "Rainy day scenario: mint 200wATOM, swap 300wATOM for IBC fee (not enough tokens for swap)"
@@ -412,6 +414,7 @@ assert_balance_neutron "$astroport_router_contract_address" "untrn" "95666"
 assert_balance_neutron "$lido_satellite_contract_address" "$ATOM_ON_NEUTRON_IBC_DENOM" "6300"
 assert_no_funds_neutron "$wrap_and_send_contract_address"
 assert_no_funds_neutron "$sentinel_contract_address"
+assert_balance_gaia "$MAIN_WALLET_ADDR_GAIA" "$watom_on_gaia_ibc_denom" "1800"
 
 echo
 echo "Rainy day scenario: mint 400wATOM, swap 300wATOM for IBC fee, initiate IBC transfer of 100wATOM to Gaia using wrong source port"
@@ -434,6 +437,7 @@ assert_balance_neutron "$astroport_router_contract_address" "untrn" "95666"
 assert_balance_neutron "$lido_satellite_contract_address" "$ATOM_ON_NEUTRON_IBC_DENOM" "6700"
 assert_no_funds_neutron "$wrap_and_send_contract_address"
 assert_no_funds_neutron "$sentinel_contract_address"
+assert_balance_gaia "$MAIN_WALLET_ADDR_GAIA" "$watom_on_gaia_ibc_denom" "1800"
 
 echo
 echo "Rainy day scenario: mint 400wATOM, swap 300wATOM for IBC fee, initiate IBC transfer of 100wATOM to Gaia using wrong source channel"
@@ -454,6 +458,29 @@ assert_balance_neutron "$refund_address" "factory/$lido_satellite_contract_addre
 assert_balance_neutron "$astroport_router_contract_address" "factory/$lido_satellite_contract_address/wATOM" "700"
 assert_balance_neutron "$astroport_router_contract_address" "untrn" "95666"
 assert_balance_neutron "$lido_satellite_contract_address" "$ATOM_ON_NEUTRON_IBC_DENOM" "7100"
-assert_balance_neutron "$wrap_and_send_contract_address" "untrn" "0"
 assert_no_funds_neutron "$wrap_and_send_contract_address"
 assert_no_funds_neutron "$sentinel_contract_address"
+assert_balance_gaia "$MAIN_WALLET_ADDR_GAIA" "$watom_on_gaia_ibc_denom" "1800"
+
+echo
+echo "Rainy day scenario: mint 400 wATOM, swap 300 wATOM for IBC fee, initiate transfer of 100 wATOM to invalid receiver on Gaia"
+msg="$(printf '{
+  "wrap_and_send": {
+    "source_port": "transfer",
+    "source_channel": "channel-xxx",
+    "receiver": "some_invalid_address",
+    "amount_to_swap_for_ibc_fee": "300",
+    "ibc_fee_denom": "untrn",
+    "astroport_swap_operations": [{"native_swap":{"offer_denom": "%s", "ask_denom":"untrn"}}],
+    "refund_address": "%s"
+  }
+}' "factory/$lido_satellite_contract_address/wATOM" "$refund_address")"
+neutrond tx wasm execute "$sentinel_contract_address" "$msg" --amount "400$ATOM_ON_NEUTRON_IBC_DENOM" --from "$MAIN_WALLET" "${ntx[@]}" | wait_ntx | assert_success
+assert_balance_neutron "$refund_address" "untrn" "2334"
+assert_balance_neutron "$refund_address" "factory/$lido_satellite_contract_address/wATOM" "2500"
+assert_balance_neutron "$astroport_router_contract_address" "factory/$lido_satellite_contract_address/wATOM" "700"
+assert_balance_neutron "$astroport_router_contract_address" "untrn" "95666"
+assert_balance_neutron "$lido_satellite_contract_address" "$ATOM_ON_NEUTRON_IBC_DENOM" "7500"
+assert_no_funds_neutron "$wrap_and_send_contract_address"
+assert_no_funds_neutron "$sentinel_contract_address"
+assert_balance_gaia "$MAIN_WALLET_ADDR_GAIA" "$watom_on_gaia_ibc_denom" "1800"
