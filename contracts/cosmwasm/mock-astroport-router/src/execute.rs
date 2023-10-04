@@ -59,6 +59,13 @@ pub fn execute_swap_operations(
                         amount: coins(2334, config.ask_denom),
                     }))
                 }
+                500 => {
+                    // swap returns invalid coin
+                    Ok(Response::new().add_message(BankMsg::Send {
+                        to_address: info.sender.to_string(),
+                        amount: coins(2500, "uibcatom"),
+                    }))
+                }
                 _ => unimplemented!(),
             }
         }
