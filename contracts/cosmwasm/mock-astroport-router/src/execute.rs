@@ -69,6 +69,16 @@ pub fn execute_swap_operations(
                         amount: coins(2500, "uibcatom"),
                     }))
                 }
+                600 => {
+                    // swap returns 2000uibcatom, as requested.
+                    // this is invalid, but it is different from previous scenario,
+                    // because it was requested explicitly
+                    assert_eq!(ask_denom, "uibcatom");
+                    Ok(Response::new().add_message(BankMsg::Send {
+                        to_address: info.sender.to_string(),
+                        amount: coins(2000, "uibcatom"),
+                    }))
+                }
                 _ => unimplemented!(),
             }
         }

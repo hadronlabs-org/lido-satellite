@@ -99,6 +99,7 @@ pub(crate) fn execute_swap_callback(
     refund_address: String,
 ) -> ContractResult<Response<NeutronMsg>> {
     if info.sender != env.contract.address {
+        // TODO: unit test this execution branch
         return Err(ContractError::InternalMethod {});
     }
 
@@ -161,6 +162,7 @@ pub(crate) fn execute_swap_callback(
     Ok(response)
 }
 
+// TODO: unit test this function
 fn calculate_min_ibc_fee(deps: Deps<NeutronQuery>, ibc_fee_denom: &str) -> ContractResult<IbcFee> {
     let mut fee = query_min_ibc_fee(deps)?.min_fee;
     fee.ack_fee.retain(|coin| coin.denom == ibc_fee_denom);
