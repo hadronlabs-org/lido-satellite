@@ -77,7 +77,6 @@ pub(crate) fn execute_wrap_and_send(
 
     Ok(Response::new()
         .add_message(wrap_msg)
-        // TODO: handle reply
         .add_submessage(SubMsg::reply_on_error(callback_msg, WRAP_REPLY_ID)))
 }
 
