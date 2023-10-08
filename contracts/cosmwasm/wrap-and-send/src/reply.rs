@@ -1,5 +1,5 @@
 use crate::{
-    state::{FUNDS, IBC_TRANSFER_CONTEXT, IBC_TRANSFER_INFO, REFUND_ADDRESS},
+    state::{EXECUTION_FLAG, FUNDS, IBC_TRANSFER_CONTEXT, IBC_TRANSFER_INFO, REFUND_ADDRESS},
     ContractResult,
 };
 use cosmwasm_std::{attr, from_binary, BankMsg, CosmosMsg, DepsMut, Env, Response, SubMsgResult};
@@ -13,6 +13,8 @@ pub fn reply_wrap(
     _env: Env,
     result: SubMsgResult,
 ) -> ContractResult<Response<NeutronMsg>> {
+    EXECUTION_FLAG.remove(deps.storage);
+
     match result {
         // I ignore this error string since I am not sure how to propogate it
         // and inserting it into attributes doesn't sound right at all
@@ -45,6 +47,8 @@ pub(crate) fn reply_ibc_transfer(
     // Handle immediate reply from IBC transfer module
     // On failure: refund canonical funds and IBC fees back to user
     // On success: store sequence_id and channel to handle IBC callback later
+
+    EXECUTION_FLAG.remove(deps.storage);
 
     let context = IBC_TRANSFER_CONTEXT.load(deps.storage)?;
     IBC_TRANSFER_CONTEXT.remove(deps.storage);

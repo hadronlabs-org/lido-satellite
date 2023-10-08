@@ -23,6 +23,9 @@ pub enum ContractError {
 
     #[error("couldn't calculate minimum IBC fee")]
     MinIbcFee {},
+
+    #[error("already in execution: reentrance is not allowed")]
+    AlreadyInExecution {},
 }
 
 pub type ContractResult<T> = Result<T, ContractError>;

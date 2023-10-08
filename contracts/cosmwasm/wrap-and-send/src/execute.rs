@@ -1,7 +1,7 @@
 use crate::{
     contract::{IBC_TRANSFER_REPLY_ID, WRAP_REPLY_ID},
     msg::ExecuteMsg,
-    state::{IbcTransferInfo, CONFIG, FUNDS, IBC_TRANSFER_CONTEXT, REFUND_ADDRESS},
+    state::{IbcTransferInfo, CONFIG, EXECUTION_FLAG, FUNDS, IBC_TRANSFER_CONTEXT, REFUND_ADDRESS},
     ContractError, ContractResult,
 };
 use astroport::router::{
@@ -38,6 +38,12 @@ pub(crate) fn execute_wrap_and_send(
     astroport_swap_operations: Vec<SwapOperation>,
     refund_address: String,
 ) -> ContractResult<Response<NeutronMsg>> {
+    if let Some(true) = EXECUTION_FLAG.may_load(deps.storage)? {
+        // TODO: unit test this code path
+        return Err(ContractError::AlreadyInExecution {});
+    }
+    EXECUTION_FLAG.save(deps.storage, &true)?;
+
     let config = CONFIG.load(deps.storage)?;
 
     let refund_address = deps.api.addr_validate(&refund_address)?;
