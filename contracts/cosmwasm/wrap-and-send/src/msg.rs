@@ -1,6 +1,6 @@
 use astroport::router::SwapOperation;
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{Coin, Uint128};
+use cosmwasm_std::{Addr, Coin, Uint128};
 use neutron_sdk::bindings::msg::IbcFee;
 
 #[cw_serde]
@@ -13,7 +13,6 @@ pub struct InstantiateMsg {
 
 #[cw_serde]
 pub enum ExecuteMsg {
-    // FIXME: maybe this method should only be callable by sentinel?
     /// This method expects user to send bridged funds, which will be sent to Lido Satellite
     /// and locked in there. Lido Satellite will mint canonical funds in return, which will
     /// be sent further to another destination chain. This call also automatically swaps a small
@@ -43,13 +42,25 @@ pub enum ExecuteMsg {
     },
     /// Internal call, only contract itself can execute it. Users of a contract shall ignore and
     /// never try to use it.
+    WrapCallback {
+        source_port: String,
+        source_channel: String,
+        receiver: String,
+        amount_to_swap_for_ibc_fee: Uint128,
+        ibc_fee_denom: String,
+        astroport_swap_operations: Vec<SwapOperation>,
+        received_amount: Uint128,
+        refund_address: Addr,
+    },
+    /// Internal call, only contract itself can execute it. Users of a contract shall ignore and
+    /// never try to use it.
     SwapCallback {
         source_port: String,
         source_channel: String,
         receiver: String,
         amount_to_send: Coin,
         min_ibc_fee: IbcFee,
-        refund_address: String,
+        refund_address: Addr,
     },
 }
 

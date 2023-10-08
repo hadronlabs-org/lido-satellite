@@ -1,15 +1,15 @@
 use crate::{
-    contract::IBC_TRANSFER_REPLY_ID,
+    contract::{IBC_TRANSFER_REPLY_ID, WRAP_REPLY_ID},
     msg::ExecuteMsg,
-    state::{IbcTransferInfo, CONFIG, IBC_TRANSFER_CONTEXT},
+    state::{IbcTransferInfo, CONFIG, FUNDS, IBC_TRANSFER_CONTEXT, REFUND_ADDRESS},
     ContractError, ContractResult,
 };
 use astroport::router::{
     ExecuteMsg::ExecuteSwapOperations as AstroportExecuteSwapOperations, SwapOperation,
 };
 use cosmwasm_std::{
-    coin, to_binary, BankMsg, Coin, Deps, DepsMut, Env, MessageInfo, Response, SubMsg, Uint128,
-    WasmMsg,
+    coin, to_binary, Addr, BankMsg, Coin, Deps, DepsMut, Env, MessageInfo, Response, SubMsg,
+    Uint128, WasmMsg,
 };
 use lido_satellite::{
     error::ContractError as LidoSatelliteContractError, execute::find_denom,
@@ -40,9 +40,62 @@ pub(crate) fn execute_wrap_and_send(
 ) -> ContractResult<Response<NeutronMsg>> {
     let config = CONFIG.load(deps.storage)?;
 
+    let refund_address = deps.api.addr_validate(&refund_address)?;
+    REFUND_ADDRESS.save(deps.storage, &refund_address)?;
+
     let received_amount = find_denom(&info.funds, &config.bridged_denom)?
         .ok_or(LidoSatelliteContractError::NothingToMint {})?
         .amount;
+    let potential_refund = coin(received_amount.u128(), config.canonical_denom);
+    FUNDS.save(deps.storage, &potential_refund)?;
+
+    let wrap_msg = WasmMsg::Execute {
+        contract_addr: config.lido_satellite.into_string(),
+        msg: to_binary(&LidoSatelliteExecuteMint { receiver: None })?,
+        funds: info.funds,
+    };
+    let callback_msg = WasmMsg::Execute {
+        contract_addr: env.contract.address.into_string(),
+        msg: to_binary(&ExecuteMsg::WrapCallback {
+            source_port,
+            source_channel,
+            receiver,
+            amount_to_swap_for_ibc_fee,
+            ibc_fee_denom,
+            astroport_swap_operations,
+            received_amount,
+            refund_address,
+        })?,
+        funds: vec![],
+    };
+
+    Ok(Response::new()
+        .add_message(wrap_msg)
+        // TODO: handle reply
+        .add_submessage(SubMsg::reply_on_error(callback_msg, WRAP_REPLY_ID)))
+}
+
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn execute_wrap_callback(
+    deps: DepsMut<NeutronQuery>,
+    env: Env,
+    info: MessageInfo,
+    source_port: String,
+    source_channel: String,
+    receiver: String,
+    amount_to_swap_for_ibc_fee: Uint128,
+    ibc_fee_denom: String,
+    astroport_swap_operations: Vec<SwapOperation>,
+    received_amount: Uint128,
+    refund_address: Addr,
+) -> ContractResult<Response<NeutronMsg>> {
+    if info.sender != env.contract.address {
+        // TODO: unit test this execution branch
+        return Err(ContractError::InternalMethod {});
+    }
+
+    let config = CONFIG.load(deps.storage)?;
+
     let amount_to_send = coin(
         received_amount
             .checked_sub(amount_to_swap_for_ibc_fee)?
@@ -53,11 +106,6 @@ pub(crate) fn execute_wrap_and_send(
         coin(amount_to_swap_for_ibc_fee.u128(), &config.canonical_denom);
     let min_ibc_fee = calculate_min_ibc_fee(deps.as_ref(), &ibc_fee_denom)?;
 
-    let wrap_msg = WasmMsg::Execute {
-        contract_addr: config.lido_satellite.into_string(),
-        msg: to_binary(&LidoSatelliteExecuteMint { receiver: None })?,
-        funds: info.funds,
-    };
     let swap_msg = WasmMsg::Execute {
         contract_addr: config.astroport_router.into_string(),
         msg: to_binary(&AstroportExecuteSwapOperations {
@@ -83,7 +131,7 @@ pub(crate) fn execute_wrap_and_send(
         funds: vec![],
     };
 
-    Ok(Response::new().add_messages([wrap_msg, swap_msg, callback_msg]))
+    Ok(Response::new().add_messages([swap_msg, callback_msg]))
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -96,14 +144,12 @@ pub(crate) fn execute_swap_callback(
     receiver: String,
     amount_to_send: Coin,
     min_ibc_fee: IbcFee,
-    refund_address: String,
+    refund_address: Addr,
 ) -> ContractResult<Response<NeutronMsg>> {
     if info.sender != env.contract.address {
         // TODO: unit test this execution branch
         return Err(ContractError::InternalMethod {});
     }
-
-    let refund_address = deps.api.addr_validate(&refund_address)?;
 
     let total_ibc_fee = min_ibc_fee.ack_fee[0].amount + min_ibc_fee.timeout_fee[0].amount;
     let ibc_fee_denom = min_ibc_fee.ack_fee[0].denom.clone();

@@ -3,13 +3,11 @@ use crate::{
     msg::ExecuteMsg,
     tests::helpers::{bin_request_to_query_request, craft_wrap_and_send_msg, mock_instantiate},
 };
-use astroport::router::{
-    ExecuteMsg::ExecuteSwapOperations as AstroportExecuteSwapOperations, SwapOperation,
-};
+use astroport::router::SwapOperation;
 use cosmwasm_std::{
     coin, coins,
     testing::{mock_info, MockQuerier, MOCK_CONTRACT_ADDR},
-    to_binary, ContractResult, CosmosMsg, Querier, QuerierResult, QueryRequest, SystemResult,
+    to_binary, Addr, ContractResult, CosmosMsg, Querier, QuerierResult, QueryRequest, SystemResult,
     Uint128, WasmMsg,
 };
 use lido_satellite::msg::ExecuteMsg::Mint as LidoSatelliteExecuteMint;
@@ -30,7 +28,7 @@ mod invalid_funds {
             deps.as_mut(),
             env,
             mock_info("stranger", &[]),
-            craft_wrap_and_send_msg(0u128),
+            craft_wrap_and_send_msg(),
         )
         .unwrap_err();
     }
@@ -42,7 +40,7 @@ mod invalid_funds {
             deps.as_mut(),
             env,
             mock_info("stranger", &[coin(200, "denom1")]),
-            craft_wrap_and_send_msg(0u128),
+            craft_wrap_and_send_msg(),
         )
         .unwrap_err();
     }
@@ -54,7 +52,7 @@ mod invalid_funds {
             deps.as_mut(),
             env,
             mock_info("stranger", &[coin(200, "denom1"), coin(300, "denom2")]),
-            craft_wrap_and_send_msg(0u128),
+            craft_wrap_and_send_msg(),
         )
         .unwrap_err();
     }
@@ -69,19 +67,7 @@ mod invalid_funds {
                 "stranger",
                 &[coin(200, "bridged_denom"), coin(300, "denom2")],
             ),
-            craft_wrap_and_send_msg(0u128),
-        )
-        .unwrap_err();
-    }
-
-    #[test]
-    fn not_enough_for_ibc_fee() {
-        let (mut deps, env) = mock_instantiate::<MockQuerier>();
-        execute(
-            deps.as_mut(),
-            env,
-            mock_info("stranger", &[coin(200, "bridged_denom")]),
-            craft_wrap_and_send_msg(300u128),
+            craft_wrap_and_send_msg(),
         )
         .unwrap_err();
     }
@@ -135,7 +121,7 @@ fn success() {
         },
     )
     .unwrap();
-    assert_eq!(response.messages.len(), 3);
+    assert_eq!(response.messages.len(), 2);
     assert_eq!(
         response.messages[0].msg,
         CosmosMsg::Wasm(WasmMsg::Execute {
@@ -147,35 +133,19 @@ fn success() {
     assert_eq!(
         response.messages[1].msg,
         CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: "astroport_router".to_string(),
-            msg: to_binary(&AstroportExecuteSwapOperations {
-                operations: vec![SwapOperation::NativeSwap {
-                    offer_denom: "canonical_denom".to_string(),
-                    ask_denom: "ibc_fee_denom".to_string()
-                }],
-                minimum_receive: Some(Uint128::new(50)),
-                to: None,
-                max_spread: None,
-            })
-            .unwrap(),
-            funds: coins(100, "canonical_denom"),
-        })
-    );
-    assert_eq!(
-        response.messages[2].msg,
-        CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: MOCK_CONTRACT_ADDR.to_string(),
-            msg: to_binary(&ExecuteMsg::SwapCallback {
+            msg: to_binary(&ExecuteMsg::WrapCallback {
                 source_port: "source_port".to_string(),
                 source_channel: "source_channel".to_string(),
                 receiver: "receiver".to_string(),
-                amount_to_send: coin(200, "canonical_denom"),
-                min_ibc_fee: IbcFee {
-                    recv_fee: vec![],
-                    ack_fee: coins(20, "ibc_fee_denom"),
-                    timeout_fee: coins(30, "ibc_fee_denom"),
-                },
-                refund_address: "refund_address".to_string(),
+                amount_to_swap_for_ibc_fee: Uint128::new(100),
+                ibc_fee_denom: "ibc_fee_denom".to_string(),
+                astroport_swap_operations: vec![SwapOperation::NativeSwap {
+                    offer_denom: "canonical_denom".to_string(),
+                    ask_denom: "ibc_fee_denom".to_string(),
+                }],
+                received_amount: Uint128::new(300),
+                refund_address: Addr::unchecked("refund_address"),
             })
             .unwrap(),
             funds: vec![],

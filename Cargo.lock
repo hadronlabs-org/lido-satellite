@@ -1045,19 +1045,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "wrap-and-send-sentinel"
-version = "0.1.0"
-dependencies = [
- "cosmwasm-schema",
- "cosmwasm-std",
- "cw-storage-plus 1.1.0",
- "cw2 1.1.0",
- "lido-satellite",
- "thiserror",
- "wrap-and-send",
-]
-
-[[package]]
 name = "zeroize"
 version = "1.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"

@@ -1,12 +1,39 @@
 use crate::{
-    state::{IBC_TRANSFER_CONTEXT, IBC_TRANSFER_INFO},
+    state::{FUNDS, IBC_TRANSFER_CONTEXT, IBC_TRANSFER_INFO, REFUND_ADDRESS},
     ContractResult,
 };
-use cosmwasm_std::{attr, from_binary, DepsMut, Env, Response, SubMsgResult};
+use cosmwasm_std::{attr, from_binary, BankMsg, CosmosMsg, DepsMut, Env, Response, SubMsgResult};
 use neutron_sdk::bindings::{
     msg::{MsgIbcTransferResponse, NeutronMsg},
     query::NeutronQuery,
 };
+
+pub fn reply_wrap(
+    deps: DepsMut<NeutronQuery>,
+    _env: Env,
+    result: SubMsgResult,
+) -> ContractResult<Response<NeutronMsg>> {
+    match result {
+        // I ignore this error string since I am not sure how to propogate it
+        // and inserting it into attributes doesn't sound right at all
+        SubMsgResult::Err(_e) => {
+            let refund_address = REFUND_ADDRESS.load(deps.storage)?;
+            let funds = FUNDS.load(deps.storage)?;
+
+            let send_msg: CosmosMsg<NeutronMsg> = BankMsg::Send {
+                to_address: refund_address.into_string(),
+                amount: vec![funds],
+            }
+            .into();
+
+            // TODO: attributes
+            Ok(Response::new().add_message(send_msg))
+        }
+        // We don't need to do anything, our job is done
+        // TODO: attributes
+        SubMsgResult::Ok(_response) => Ok(Response::new()),
+    }
+}
 
 pub(crate) fn reply_ibc_transfer(
     deps: DepsMut<NeutronQuery>,

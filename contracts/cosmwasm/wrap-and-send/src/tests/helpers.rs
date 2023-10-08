@@ -58,12 +58,12 @@ pub fn assert_config(
     )
 }
 
-pub fn craft_wrap_and_send_msg(amount_to_swap_for_ibc_fee: impl Into<Uint128>) -> ExecuteMsg {
+pub fn craft_wrap_and_send_msg() -> ExecuteMsg {
     ExecuteMsg::WrapAndSend {
         source_port: "source_port".to_string(),
         source_channel: "source_channel".to_string(),
         receiver: "receiver".to_string(),
-        amount_to_swap_for_ibc_fee: amount_to_swap_for_ibc_fee.into(),
+        amount_to_swap_for_ibc_fee: Uint128::new(0),
         ibc_fee_denom: "ibc_fee_denom".to_string(),
         astroport_swap_operations: vec![],
         refund_address: "refund_address".to_string(),
