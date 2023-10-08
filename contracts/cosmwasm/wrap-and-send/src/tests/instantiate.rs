@@ -1,19 +1,20 @@
 use crate::{
     contract::instantiate,
     msg::InstantiateMsg,
-    tests::helpers::{assert_config, bin_request_to_query_request},
+    state::{Config, CONFIG},
+    tests::helpers::bin_request_to_query_request,
 };
 use cosmwasm_std::{
     attr,
     testing::{mock_env, mock_info, MockApi, MockStorage},
-    to_binary, ContractResult, OwnedDeps, Querier, QuerierResult, QueryRequest, Response,
-    SystemResult, WasmQuery,
+    to_binary, Addr, ContractResult, OwnedDeps, Querier, QuerierResult, QueryRequest, SystemResult,
+    WasmQuery,
 };
 use lido_satellite::msg::{
     ConfigResponse as LidoSatelliteQueryConfigResponse,
     QueryMsg::Config as LidoSatelliteQueryConfig,
 };
-use neutron_sdk::bindings::{msg::NeutronMsg, query::NeutronQuery};
+use neutron_sdk::bindings::query::NeutronQuery;
 use std::marker::PhantomData;
 
 #[derive(Default)]
@@ -64,38 +65,25 @@ fn success() {
         },
     )
     .unwrap();
-    assert_instantiate_response(
-        &response,
-        "lido_satellite",
-        "astroport_router",
-        "bridged_denom",
-        "canonical_denom",
-    );
-    assert_config(
-        deps.as_ref(),
-        "lido_satellite",
-        "astroport_router",
-        "bridged_denom",
-        "canonical_denom",
-    );
-}
-
-fn assert_instantiate_response(
-    response: &Response<NeutronMsg>,
-    lido_satellite: &str,
-    astroport_router: &str,
-    bridged_denom: &str,
-    canonical_denom: &str,
-) {
     assert!(response.messages.is_empty());
     assert_eq!(
         response.attributes,
         vec![
             attr("action", "instantiate"),
-            attr("lido_satellite", lido_satellite),
-            attr("astroport_router", astroport_router),
-            attr("bridged_denom", bridged_denom),
-            attr("canonical_denom", canonical_denom)
+            attr("lido_satellite", "lido_satellite"),
+            attr("astroport_router", "astroport_router"),
+            attr("bridged_denom", "bridged_denom"),
+            attr("canonical_denom", "canonical_denom")
         ]
+    );
+    let config = CONFIG.load(deps.as_ref().storage).unwrap();
+    assert_eq!(
+        config,
+        Config {
+            lido_satellite: Addr::unchecked("lido_satellite"),
+            astroport_router: Addr::unchecked("astroport_router"),
+            bridged_denom: "bridged_denom".to_string(),
+            canonical_denom: "canonical_denom".to_string(),
+        }
     );
 }

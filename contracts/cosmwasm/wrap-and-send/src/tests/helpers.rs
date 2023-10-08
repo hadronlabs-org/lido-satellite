@@ -6,8 +6,7 @@ use cosmwasm_schema::serde::de::DeserializeOwned;
 use cosmwasm_std::{
     coin, coins, from_slice,
     testing::{mock_env, MockApi, MockStorage},
-    Addr, Deps, DepsMut, Env, OwnedDeps, Querier, QuerierResult, QueryRequest, SystemError,
-    Uint128,
+    Addr, DepsMut, Env, OwnedDeps, Querier, QuerierResult, QueryRequest, SystemError, Uint128,
 };
 use neutron_sdk::{
     bindings::{msg::IbcFee, query::NeutronQuery},
@@ -37,25 +36,6 @@ pub fn mock_instantiate<Q: Querier + Default>(
         )
         .unwrap();
     (deps, env)
-}
-
-pub fn assert_config(
-    deps: Deps<NeutronQuery>,
-    lido_satellite: &str,
-    astroport_router: &str,
-    bridged_denom: &str,
-    canonical_denom: &str,
-) {
-    let config = CONFIG.load(deps.storage).unwrap();
-    assert_eq!(
-        config,
-        Config {
-            lido_satellite: Addr::unchecked(lido_satellite),
-            astroport_router: Addr::unchecked(astroport_router),
-            bridged_denom: bridged_denom.to_string(),
-            canonical_denom: canonical_denom.to_string(),
-        }
-    )
 }
 
 pub fn craft_wrap_and_send_msg() -> ExecuteMsg {
