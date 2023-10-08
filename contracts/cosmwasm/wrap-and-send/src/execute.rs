@@ -1,7 +1,9 @@
 use crate::{
     contract::{IBC_TRANSFER_REPLY_ID, WRAP_REPLY_ID},
     msg::ExecuteMsg,
-    state::{IbcTransferInfo, CONFIG, EXECUTION_FLAG, FUNDS, IBC_TRANSFER_CONTEXT, REFUND_ADDRESS},
+    state::{
+        IbcTransferInfo, RefundInfo, CONFIG, EXECUTION_FLAG, IBC_TRANSFER_CONTEXT, REFUND_INFO,
+    },
     ContractError, ContractResult,
 };
 use astroport::router::{
@@ -47,13 +49,17 @@ pub(crate) fn execute_wrap_and_send(
     let config = CONFIG.load(deps.storage)?;
 
     let refund_address = deps.api.addr_validate(&refund_address)?;
-    REFUND_ADDRESS.save(deps.storage, &refund_address)?;
-
     let received_amount = find_denom(&info.funds, &config.bridged_denom)?
         .ok_or(LidoSatelliteContractError::NothingToMint {})?
         .amount;
     let potential_refund = coin(received_amount.u128(), config.canonical_denom);
-    FUNDS.save(deps.storage, &potential_refund)?;
+    REFUND_INFO.save(
+        deps.storage,
+        &RefundInfo {
+            refund_address: refund_address.clone(),
+            funds: potential_refund,
+        },
+    )?;
 
     let wrap_msg = WasmMsg::Execute {
         contract_addr: config.lido_satellite.into_string(),

@@ -12,20 +12,23 @@ pub struct Config {
 }
 pub const CONFIG: Item<Config> = Item::new("config");
 
+// reentrance protection
+pub const EXECUTION_FLAG: Item<bool> = Item::new("execution_flag");
+
+// temporary state used to refund canonical denoms in case if contract execution fails
+#[cw_serde]
+pub struct RefundInfo {
+    pub refund_address: Addr,
+    pub funds: Coin,
+}
+pub const REFUND_INFO: Item<RefundInfo> = Item::new("refund_info");
+
 #[cw_serde]
 pub struct IbcTransferInfo {
     pub refund_address: Addr,
     pub ibc_fee: IbcFee,
     pub sent_amount: Coin,
 }
-
-// reentrance protection
-pub const EXECUTION_FLAG: Item<bool> = Item::new("execution_flag");
-
-// TODO: combine this into a structure? structure name will also document it
-// temporary state used to refund canonical denoms in case if contract fails
-pub const REFUND_ADDRESS: Item<Addr> = Item::new("refund_address");
-pub const FUNDS: Item<Coin> = Item::new("funds");
 
 // temporary state used to restore context after a call to IBC transfer module
 pub const IBC_TRANSFER_CONTEXT: Item<IbcTransferInfo> = Item::new("ibc_transfer_context");

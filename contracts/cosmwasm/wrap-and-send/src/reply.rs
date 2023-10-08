@@ -1,5 +1,5 @@
 use crate::{
-    state::{EXECUTION_FLAG, FUNDS, IBC_TRANSFER_CONTEXT, IBC_TRANSFER_INFO, REFUND_ADDRESS},
+    state::{EXECUTION_FLAG, IBC_TRANSFER_CONTEXT, IBC_TRANSFER_INFO, REFUND_INFO},
     ContractResult,
 };
 use cosmwasm_std::{attr, from_binary, BankMsg, CosmosMsg, DepsMut, Env, Response, SubMsgResult};
@@ -19,12 +19,11 @@ pub fn reply_wrap(
         // I ignore this error string since I am not sure how to propogate it
         // and inserting it into attributes doesn't sound right at all
         SubMsgResult::Err(_e) => {
-            let refund_address = REFUND_ADDRESS.load(deps.storage)?;
-            let funds = FUNDS.load(deps.storage)?;
+            let refund_info = REFUND_INFO.load(deps.storage)?;
 
             let send_msg: CosmosMsg<NeutronMsg> = BankMsg::Send {
-                to_address: refund_address.into_string(),
-                amount: vec![funds],
+                to_address: refund_info.refund_address.into_string(),
+                amount: vec![refund_info.funds],
             }
             .into();
 
