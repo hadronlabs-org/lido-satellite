@@ -41,12 +41,6 @@ pub(crate) fn reply_ibc_transfer(
     _env: Env,
     result: SubMsgResult,
 ) -> ContractResult<Response<NeutronMsg>> {
-    // TODO: rewrite these doc steps, they are outdated
-    // Step 4.
-    // Handle immediate reply from IBC transfer module
-    // On failure: refund canonical funds and IBC fees back to user
-    // On success: store sequence_id and channel to handle IBC callback later
-
     EXECUTION_FLAG.remove(deps.storage);
 
     let context = IBC_TRANSFER_CONTEXT.load(deps.storage)?;
