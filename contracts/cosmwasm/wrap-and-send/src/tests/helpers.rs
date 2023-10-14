@@ -1,4 +1,8 @@
-use crate::state::{Config, IbcTransferInfo, CONFIG, IBC_TRANSFER_INFO};
+use crate::{
+    msg::ExecuteMsg,
+    state::{Config, IbcTransferInfo, CONFIG, IBC_TRANSFER_INFO},
+};
+use astroport::router::SwapOperation;
 use cosmwasm_schema::serde::de::DeserializeOwned;
 use cosmwasm_std::{
     coin, coins, from_slice,
@@ -76,4 +80,53 @@ pub fn bin_request_to_query_request<T: DeserializeOwned>(
             request: bin_request.into(),
         })
     })
+}
+
+pub fn craft_wrap_and_send_msg(amount_to_swap_for_ibc_fee: u128) -> ExecuteMsg {
+    ExecuteMsg::WrapAndSend {
+        source_port: "source_port".to_string(),
+        source_channel: "source_channel".to_string(),
+        receiver: "receiver".to_string(),
+        amount_to_swap_for_ibc_fee: amount_to_swap_for_ibc_fee.into(),
+        ibc_fee_denom: "ibc_fee_denom".to_string(),
+        astroport_swap_operations: vec![SwapOperation::NativeSwap {
+            offer_denom: "canonical_denom".to_string(),
+            ask_denom: "ibc_fee_denom".to_string(),
+        }],
+        refund_address: "refund_address".to_string(),
+    }
+}
+
+pub fn craft_wrap_callback_msg(
+    amount_to_swap_for_ibc_fee: u128,
+    received_amount: u128,
+) -> ExecuteMsg {
+    ExecuteMsg::WrapCallback {
+        source_port: "source_port".to_string(),
+        source_channel: "source_channel".to_string(),
+        receiver: "receiver".to_string(),
+        amount_to_swap_for_ibc_fee: amount_to_swap_for_ibc_fee.into(),
+        ibc_fee_denom: "ibc_fee_denom".to_string(),
+        astroport_swap_operations: vec![SwapOperation::NativeSwap {
+            offer_denom: "canonical_denom".to_string(),
+            ask_denom: "ibc_fee_denom".to_string(),
+        }],
+        received_amount: received_amount.into(),
+        refund_address: Addr::unchecked("refund_address"),
+    }
+}
+
+pub fn craft_swap_callback_msg() -> ExecuteMsg {
+    ExecuteMsg::SwapCallback {
+        source_port: "source_port".to_string(),
+        source_channel: "source_channel".to_string(),
+        receiver: "receiver".to_string(),
+        amount_to_send: coin(200, "canonical_denom"),
+        min_ibc_fee: IbcFee {
+            recv_fee: vec![],
+            ack_fee: coins(20, "ibc_fee_denom"),
+            timeout_fee: coins(30, "ibc_fee_denom"),
+        },
+        refund_address: Addr::unchecked("refund_address"),
+    }
 }

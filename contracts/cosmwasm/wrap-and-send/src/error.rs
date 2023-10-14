@@ -26,6 +26,12 @@ pub enum ContractError {
 
     #[error("already in execution: reentrance is not allowed")]
     AlreadyInExecution {},
+
+    #[error("amount_to_swap_for_ibc_fee is zero")]
+    ZeroForSwap {},
+
+    #[error("supplied funds are not enough to perform swap")]
+    NotEnoughForSwap {},
 }
 
 pub type ContractResult<T> = Result<T, ContractError>;

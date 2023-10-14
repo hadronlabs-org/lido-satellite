@@ -45,8 +45,8 @@ pub(crate) fn execute_wrap_and_send(
     }
     EXECUTION_FLAG.save(deps.storage, &true)?;
 
-    let mut response = Response::new().add_attribute("action", "wrap_and_send");
     let config = CONFIG.load(deps.storage)?;
+    let mut response = Response::new().add_attribute("action", "wrap_and_send");
 
     let received_amount = find_denom(&info.funds, &config.bridged_denom)?
         .ok_or(LidoSatelliteContractError::NothingToMint {})?
@@ -108,21 +108,40 @@ pub(crate) fn execute_wrap_callback(
     refund_address: Addr,
 ) -> ContractResult<Response<NeutronMsg>> {
     if info.sender != env.contract.address {
-        // TODO: unit test this execution branch
         return Err(ContractError::InternalMethod {});
     }
 
-    let config = CONFIG.load(deps.storage)?;
+    if amount_to_swap_for_ibc_fee.is_zero() {
+        return Err(ContractError::ZeroForSwap {});
+    } else if amount_to_swap_for_ibc_fee >= received_amount {
+        return Err(ContractError::NotEnoughForSwap {});
+    }
 
-    let amount_to_send = coin(
-        received_amount
-            .checked_sub(amount_to_swap_for_ibc_fee)?
-            .u128(),
-        &config.canonical_denom,
-    );
+    let config = CONFIG.load(deps.storage)?;
+    let mut response = Response::new();
+
     let amount_to_swap_for_ibc_fee =
         coin(amount_to_swap_for_ibc_fee.u128(), &config.canonical_denom);
+    response = response.add_attribute(
+        "amount_to_swap_for_ibc_fee",
+        amount_to_swap_for_ibc_fee.to_string(),
+    );
+
+    let amount_to_send = coin(
+        (received_amount - amount_to_swap_for_ibc_fee.amount).u128(),
+        &config.canonical_denom,
+    );
+    response = response.add_attribute("amount_to_send", amount_to_send.to_string());
+
     let min_ibc_fee = calculate_min_ibc_fee(deps.as_ref(), &ibc_fee_denom)?;
+    response = response.add_attribute(
+        "min_ibc_fee",
+        format!(
+            "{}{}",
+            min_ibc_fee.ack_fee[0].amount + min_ibc_fee.timeout_fee[0].amount,
+            min_ibc_fee.ack_fee[0].denom
+        ),
+    );
 
     let swap_msg = WasmMsg::Execute {
         contract_addr: config.astroport_router.into_string(),
@@ -149,7 +168,7 @@ pub(crate) fn execute_wrap_callback(
         funds: vec![],
     };
 
-    Ok(Response::new().add_messages([swap_msg, callback_msg]))
+    Ok(response.add_messages([swap_msg, callback_msg]))
 }
 
 #[allow(clippy::too_many_arguments)]

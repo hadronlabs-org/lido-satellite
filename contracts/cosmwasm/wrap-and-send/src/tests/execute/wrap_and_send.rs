@@ -1,15 +1,13 @@
 use crate::{
     contract::{execute, WRAP_CALLBACK_REPLY_ID},
-    msg::ExecuteMsg,
     state::{RefundInfo, EXECUTION_FLAG, REFUND_INFO},
-    tests::helpers::mock_instantiate,
+    tests::helpers::{craft_wrap_and_send_msg, craft_wrap_callback_msg, mock_instantiate},
     ContractError,
 };
-use astroport::router::SwapOperation;
 use cosmwasm_std::{
     attr, coin, coins,
     testing::{mock_info, MockQuerier, MOCK_CONTRACT_ADDR},
-    to_binary, Addr, CosmosMsg, ReplyOn, Uint128, WasmMsg,
+    to_binary, Addr, CosmosMsg, ReplyOn, WasmMsg,
 };
 use lido_satellite::{
     msg::ExecuteMsg::Mint as LidoSatelliteExecuteMint, ContractError as LidoSatelliteError,
@@ -137,20 +135,7 @@ fn success() {
         response.messages[1].msg,
         CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: MOCK_CONTRACT_ADDR.to_string(),
-            msg: to_binary(&ExecuteMsg::WrapCallback {
-                source_port: "source_port".to_string(),
-                source_channel: "source_channel".to_string(),
-                receiver: "receiver".to_string(),
-                amount_to_swap_for_ibc_fee: Uint128::new(100),
-                ibc_fee_denom: "ibc_fee_denom".to_string(),
-                astroport_swap_operations: vec![SwapOperation::NativeSwap {
-                    offer_denom: "canonical_denom".to_string(),
-                    ask_denom: "ibc_fee_denom".to_string(),
-                }],
-                received_amount: Uint128::new(300),
-                refund_address: Addr::unchecked("refund_address"),
-            })
-            .unwrap(),
+            msg: to_binary(&craft_wrap_callback_msg(100, 300)).unwrap(),
             funds: vec![],
         })
     );
@@ -163,19 +148,4 @@ fn success() {
             attr("refund_address", "refund_address"),
         ]
     );
-}
-
-fn craft_wrap_and_send_msg(amount_to_swap_for_ibc_fee: u128) -> ExecuteMsg {
-    ExecuteMsg::WrapAndSend {
-        source_port: "source_port".to_string(),
-        source_channel: "source_channel".to_string(),
-        receiver: "receiver".to_string(),
-        amount_to_swap_for_ibc_fee: amount_to_swap_for_ibc_fee.into(),
-        ibc_fee_denom: "ibc_fee_denom".to_string(),
-        astroport_swap_operations: vec![SwapOperation::NativeSwap {
-            offer_denom: "canonical_denom".to_string(),
-            ask_denom: "ibc_fee_denom".to_string(),
-        }],
-        refund_address: "refund_address".to_string(),
-    }
 }
