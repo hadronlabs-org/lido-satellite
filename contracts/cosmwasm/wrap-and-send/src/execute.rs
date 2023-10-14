@@ -245,7 +245,6 @@ pub(crate) fn execute_swap_callback(
     Ok(response)
 }
 
-// TODO: unit test this function
 fn calculate_min_ibc_fee(deps: Deps<NeutronQuery>, ibc_fee_denom: &str) -> ContractResult<IbcFee> {
     let mut fee = query_min_ibc_fee(deps)?.min_fee;
     fee.ack_fee.retain(|coin| coin.denom == ibc_fee_denom);
@@ -259,4 +258,163 @@ fn calculate_min_ibc_fee(deps: Deps<NeutronQuery>, ibc_fee_denom: &str) -> Contr
     }
 
     Ok(fee)
+}
+
+#[cfg(test)]
+mod calculate_min_ibc_fee_tests {
+    use super::calculate_min_ibc_fee;
+    use crate::{
+        tests::helpers::{bin_request_to_query_request, mock_instantiate},
+        ContractError,
+    };
+    use cosmwasm_std::{
+        coin, coins, to_binary, ContractResult, Querier, QuerierResult, QueryRequest, SystemResult,
+    };
+    use neutron_sdk::{
+        bindings::{msg::IbcFee, query::NeutronQuery},
+        query::min_ibc_fee::MinIbcFeeResponse,
+    };
+    use std::marker::PhantomData;
+
+    trait IbcFeeResult {
+        fn ibc_fee_result() -> IbcFee;
+    }
+    #[derive(Default)]
+    struct CustomMockQuerier<T: IbcFeeResult> {
+        ibc_fee_result: PhantomData<T>,
+    }
+    impl<T: IbcFeeResult> Querier for CustomMockQuerier<T> {
+        fn raw_query(&self, bin_request: &[u8]) -> QuerierResult {
+            let request = match bin_request_to_query_request::<NeutronQuery>(bin_request) {
+                Ok(v) => v,
+                Err(e) => return e,
+            };
+            match request {
+                QueryRequest::Custom(query) => match query {
+                    NeutronQuery::MinIbcFee {} => {
+                        SystemResult::Ok(ContractResult::from(to_binary(&MinIbcFeeResponse {
+                            min_fee: T::ibc_fee_result(),
+                        })))
+                    }
+                    _ => unimplemented!(),
+                },
+                _ => unimplemented!(),
+            }
+        }
+    }
+
+    #[derive(Default)]
+    struct NormalIbcFee {}
+    impl IbcFeeResult for NormalIbcFee {
+        fn ibc_fee_result() -> IbcFee {
+            IbcFee {
+                recv_fee: vec![],
+                ack_fee: vec![coin(25, "ibc_fee_denom"), coin(45, "untrn")],
+                timeout_fee: vec![coin(30, "ibc_fee_denom"), coin(55, "untrn")],
+            }
+        }
+    }
+    #[test]
+    fn success() {
+        let (deps, _env) = mock_instantiate::<CustomMockQuerier<NormalIbcFee>>();
+        let ibc_fee = calculate_min_ibc_fee(deps.as_ref(), "ibc_fee_denom").unwrap();
+        assert_eq!(
+            ibc_fee,
+            IbcFee {
+                recv_fee: vec![],
+                ack_fee: coins(25, "ibc_fee_denom"),
+                timeout_fee: coins(30, "ibc_fee_denom"),
+            }
+        );
+    }
+
+    #[derive(Default)]
+    struct RecvFeeSet {}
+    impl IbcFeeResult for RecvFeeSet {
+        fn ibc_fee_result() -> IbcFee {
+            IbcFee {
+                recv_fee: vec![coin(15, "ibc_fee_denom"), coin(35, "untrn")],
+                ack_fee: vec![coin(25, "ibc_fee_denom"), coin(45, "untrn")],
+                timeout_fee: vec![coin(30, "ibc_fee_denom"), coin(55, "untrn")],
+            }
+        }
+    }
+    #[test]
+    fn recv_fee_is_not_empty() {
+        let (deps, _env) = mock_instantiate::<CustomMockQuerier<RecvFeeSet>>();
+        let err = calculate_min_ibc_fee(deps.as_ref(), "ibc_fee_denom").unwrap_err();
+        assert_eq!(err, ContractError::MinIbcFee {});
+    }
+
+    #[derive(Default)]
+    struct WeirdAckFee {}
+    impl IbcFeeResult for WeirdAckFee {
+        fn ibc_fee_result() -> IbcFee {
+            IbcFee {
+                recv_fee: vec![],
+                ack_fee: vec![coin(25, "weird_denom1"), coin(45, "weird_denom2")],
+                timeout_fee: vec![coin(30, "ibc_fee_denom"), coin(55, "untrn")],
+            }
+        }
+    }
+    #[test]
+    fn ack_fee_has_no_required_denom() {
+        let (deps, _env) = mock_instantiate::<CustomMockQuerier<WeirdAckFee>>();
+        let err = calculate_min_ibc_fee(deps.as_ref(), "ibc_fee_denom").unwrap_err();
+        assert_eq!(err, ContractError::MinIbcFee {});
+    }
+
+    #[derive(Default)]
+    struct ZeroAckFee {}
+    impl IbcFeeResult for ZeroAckFee {
+        fn ibc_fee_result() -> IbcFee {
+            IbcFee {
+                recv_fee: vec![],
+                ack_fee: vec![coin(0, "ibc_fee_denom"), coin(0, "untrn")],
+                timeout_fee: vec![coin(30, "ibc_fee_denom"), coin(55, "untrn")],
+            }
+        }
+    }
+    #[test]
+    fn zero_ack_fee() {
+        let (deps, _env) = mock_instantiate::<CustomMockQuerier<ZeroAckFee>>();
+        let err = calculate_min_ibc_fee(deps.as_ref(), "ibc_fee_denom").unwrap_err();
+        assert_eq!(err, ContractError::MinIbcFee {});
+    }
+
+    #[derive(Default)]
+    struct WeirdTimeoutFee {}
+    impl IbcFeeResult for WeirdTimeoutFee {
+        fn ibc_fee_result() -> IbcFee {
+            IbcFee {
+                recv_fee: vec![],
+                ack_fee: vec![coin(25, "ibc_fee_denom"), coin(45, "untrn")],
+                timeout_fee: vec![coin(30, "weird_denom1"), coin(55, "weird_denom2")],
+            }
+        }
+    }
+    #[test]
+    fn timeout_fee_has_no_required_denom() {
+        let (deps, _env) = mock_instantiate::<CustomMockQuerier<WeirdTimeoutFee>>();
+        let err = calculate_min_ibc_fee(deps.as_ref(), "ibc_fee_denom").unwrap_err();
+        assert_eq!(err, ContractError::MinIbcFee {});
+    }
+
+    #[derive(Default)]
+    struct ZeroTimeoutFee {}
+    impl IbcFeeResult for ZeroTimeoutFee {
+        fn ibc_fee_result() -> IbcFee {
+            IbcFee {
+                recv_fee: vec![],
+                ack_fee: vec![coin(25, "ibc_fee_denom"), coin(45, "untrn")],
+                timeout_fee: vec![coin(0, "ibc_fee_denom"), coin(0, "untrn")],
+            }
+        }
+    }
+    #[test]
+    fn zero_timeout_fee() {
+        let (deps, _env) = mock_instantiate::<CustomMockQuerier<ZeroTimeoutFee>>();
+        let err = calculate_min_ibc_fee(deps.as_ref(), "ibc_fee_denom").unwrap_err();
+        assert_eq!(err, ContractError::MinIbcFee {});
+    }
 }
