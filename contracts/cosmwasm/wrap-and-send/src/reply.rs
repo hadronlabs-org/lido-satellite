@@ -17,6 +17,7 @@ pub fn reply_wrap_callback(
         EXECUTION_FLAG.remove(deps.storage);
 
         let refund_info = REFUND_INFO.load(deps.storage)?;
+        REFUND_INFO.remove(deps.storage);
 
         let send_msg: CosmosMsg<NeutronMsg> = BankMsg::Send {
             to_address: refund_info.refund_address.into_string(),
