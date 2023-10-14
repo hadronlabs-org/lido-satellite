@@ -1,12 +1,9 @@
-use crate::{
-    msg::ExecuteMsg,
-    state::{Config, IbcTransferInfo, CONFIG, IBC_TRANSFER_INFO},
-};
+use crate::state::{Config, IbcTransferInfo, CONFIG, IBC_TRANSFER_INFO};
 use cosmwasm_schema::serde::de::DeserializeOwned;
 use cosmwasm_std::{
     coin, coins, from_slice,
     testing::{mock_env, MockApi, MockStorage},
-    Addr, DepsMut, Env, OwnedDeps, Querier, QuerierResult, QueryRequest, SystemError, Uint128,
+    Addr, DepsMut, Env, OwnedDeps, Querier, QuerierResult, QueryRequest, SystemError,
 };
 use neutron_sdk::{
     bindings::{msg::IbcFee, query::NeutronQuery},
@@ -36,18 +33,6 @@ pub fn mock_instantiate<Q: Querier + Default>(
         )
         .unwrap();
     (deps, env)
-}
-
-pub fn craft_wrap_and_send_msg() -> ExecuteMsg {
-    ExecuteMsg::WrapAndSend {
-        source_port: "source_port".to_string(),
-        source_channel: "source_channel".to_string(),
-        receiver: "receiver".to_string(),
-        amount_to_swap_for_ibc_fee: Uint128::new(0),
-        ibc_fee_denom: "ibc_fee_denom".to_string(),
-        astroport_swap_operations: vec![],
-        refund_address: "refund_address".to_string(),
-    }
 }
 
 pub fn craft_request_packet() -> RequestPacket {

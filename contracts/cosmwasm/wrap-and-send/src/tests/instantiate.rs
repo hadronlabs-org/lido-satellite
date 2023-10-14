@@ -65,6 +65,7 @@ fn success() {
         },
     )
     .unwrap();
+
     assert!(response.messages.is_empty());
     assert_eq!(
         response.attributes,
@@ -76,6 +77,7 @@ fn success() {
             attr("canonical_denom", "canonical_denom")
         ]
     );
+
     let config = CONFIG.load(deps.as_ref().storage).unwrap();
     assert_eq!(
         config,

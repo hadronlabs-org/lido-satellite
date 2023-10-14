@@ -41,17 +41,24 @@ pub(crate) fn execute_wrap_and_send(
     refund_address: String,
 ) -> ContractResult<Response<NeutronMsg>> {
     if let Some(true) = EXECUTION_FLAG.may_load(deps.storage)? {
-        // TODO: unit test this code path
         return Err(ContractError::AlreadyInExecution {});
     }
     EXECUTION_FLAG.save(deps.storage, &true)?;
 
+    let mut response = Response::new().add_attribute("action", "wrap_and_send");
     let config = CONFIG.load(deps.storage)?;
 
-    let refund_address = deps.api.addr_validate(&refund_address)?;
     let received_amount = find_denom(&info.funds, &config.bridged_denom)?
         .ok_or(LidoSatelliteContractError::NothingToMint {})?
         .amount;
+    response = response.add_attribute(
+        "received_amount",
+        format!("{}{}", received_amount, config.bridged_denom),
+    );
+
+    let refund_address = deps.api.addr_validate(&refund_address)?;
+    response = response.add_attribute("refund_address", &refund_address);
+
     let potential_refund = coin(received_amount.u128(), config.canonical_denom);
     REFUND_INFO.save(
         deps.storage,
@@ -81,7 +88,7 @@ pub(crate) fn execute_wrap_and_send(
         funds: vec![],
     };
 
-    Ok(Response::new()
+    Ok(response
         .add_message(wrap_msg)
         .add_submessage(SubMsg::reply_on_error(callback_msg, WRAP_CALLBACK_REPLY_ID)))
 }
