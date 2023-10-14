@@ -1,5 +1,5 @@
 use crate::{
-    contract::{IBC_TRANSFER_REPLY_ID, WRAP_REPLY_ID},
+    contract::{IBC_TRANSFER_REPLY_ID, WRAP_CALLBACK_REPLY_ID},
     msg::ExecuteMsg,
     state::{
         IbcTransferInfo, RefundInfo, CONFIG, EXECUTION_FLAG, IBC_TRANSFER_CONTEXT, REFUND_INFO,
@@ -83,7 +83,7 @@ pub(crate) fn execute_wrap_and_send(
 
     Ok(Response::new()
         .add_message(wrap_msg)
-        .add_submessage(SubMsg::reply_on_error(callback_msg, WRAP_REPLY_ID)))
+        .add_submessage(SubMsg::reply_on_error(callback_msg, WRAP_CALLBACK_REPLY_ID)))
 }
 
 #[allow(clippy::too_many_arguments)]

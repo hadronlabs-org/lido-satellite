@@ -8,7 +8,7 @@ use neutron_sdk::bindings::{
     query::NeutronQuery,
 };
 
-pub fn reply_wrap(
+pub fn reply_wrap_callback(
     deps: DepsMut<NeutronQuery>,
     _env: Env,
     result: SubMsgResult,

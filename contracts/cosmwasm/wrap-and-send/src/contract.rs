@@ -2,7 +2,7 @@ use crate::{
     execute::{execute_swap_callback, execute_wrap_and_send, execute_wrap_callback},
     msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg},
     query::query_config,
-    reply::{reply_ibc_transfer, reply_wrap},
+    reply::{reply_ibc_transfer, reply_wrap_callback},
     state::{Config, CONFIG},
     sudo::{sudo_error, sudo_response, sudo_timeout},
     ContractError, ContractResult,
@@ -20,7 +20,7 @@ use neutron_sdk::{
 pub const CONTRACT_NAME: &str = env!("CARGO_PKG_NAME");
 pub const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
-pub(crate) const WRAP_REPLY_ID: u64 = 1;
+pub(crate) const WRAP_CALLBACK_REPLY_ID: u64 = 1;
 pub(crate) const IBC_TRANSFER_REPLY_ID: u64 = 2;
 
 #[cfg_attr(not(feature = "library"), cosmwasm_std::entry_point)]
@@ -149,7 +149,7 @@ pub fn reply(
     msg: Reply,
 ) -> ContractResult<Response<NeutronMsg>> {
     match msg.id {
-        WRAP_REPLY_ID => reply_wrap(deps, env, msg.result),
+        WRAP_CALLBACK_REPLY_ID => reply_wrap_callback(deps, env, msg.result),
         IBC_TRANSFER_REPLY_ID => reply_ibc_transfer(deps, env, msg.result),
         id => Err(ContractError::UnknownReplyId { id }),
     }
