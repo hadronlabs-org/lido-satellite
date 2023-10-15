@@ -25,7 +25,7 @@ fn failure() {
         env,
         Reply {
             id: WRAP_CALLBACK_REPLY_ID,
-            result: SubMsgResult::Err("some_error".to_string()),
+            result: SubMsgResult::Err("codespace: wasm, code: 21".to_string()),
         },
     )
     .unwrap();
@@ -47,7 +47,7 @@ fn failure() {
     assert_eq!(
         response.attributes,
         vec![
-            attr("status", "failure"),
+            attr("error", "codespace: wasm, code: 21"),
             attr("action", "refund"),
             attr("refund_amount", "50canonical_denom")
         ]
