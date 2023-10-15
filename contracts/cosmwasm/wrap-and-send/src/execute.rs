@@ -10,7 +10,7 @@ use astroport::router::{
     ExecuteMsg::ExecuteSwapOperations as AstroportExecuteSwapOperations, SwapOperation,
 };
 use cosmwasm_std::{
-    coin, to_binary, Addr, BankMsg, Coin, Deps, DepsMut, Env, MessageInfo, Response, SubMsg,
+    attr, coin, to_binary, Addr, BankMsg, Coin, Deps, DepsMut, Env, MessageInfo, Response, SubMsg,
     Uint128, WasmMsg,
 };
 use lido_satellite::{
@@ -184,15 +184,16 @@ pub(crate) fn execute_swap_callback(
     refund_address: Addr,
 ) -> ContractResult<Response<NeutronMsg>> {
     if info.sender != env.contract.address {
-        // TODO: unit test this execution branch
         return Err(ContractError::InternalMethod {});
     }
 
+    let mut response = Response::new();
+
     let total_ibc_fee = min_ibc_fee.ack_fee[0].amount + min_ibc_fee.timeout_fee[0].amount;
-    let ibc_fee_denom = min_ibc_fee.ack_fee[0].denom.clone();
+    let ibc_fee_denom = &min_ibc_fee.ack_fee[0].denom;
     let fee_balance = deps
         .querier
-        .query_balance(&env.contract.address, &ibc_fee_denom)?;
+        .query_balance(&env.contract.address, ibc_fee_denom)?;
     let refund = match fee_balance.amount.cmp(&total_ibc_fee) {
         Ordering::Less => {
             // should never happen, but let's be cautious
@@ -202,10 +203,20 @@ pub(crate) fn execute_swap_callback(
         Ordering::Greater => Some(fee_balance.amount - total_ibc_fee),
     };
 
+    if let Some(refund) = refund {
+        let refund = coin(refund.u128(), ibc_fee_denom);
+        response = response
+            .add_attribute("extra_ibc_fee_refunded", refund.to_string())
+            .add_message(BankMsg::Send {
+                to_address: refund_address.to_string(),
+                amount: vec![refund],
+            })
+    }
+
     IBC_TRANSFER_CONTEXT.save(
         deps.storage,
         &IbcTransferInfo {
-            refund_address: refund_address.clone(),
+            refund_address,
             ibc_fee: min_ibc_fee.clone(),
             sent_amount: amount_to_send.clone(),
         },
@@ -214,6 +225,11 @@ pub(crate) fn execute_swap_callback(
     // 20 minutes should be enough for IBC transfer to go through
     // FIXME: maybe better allow user to set their own timeout?
     let timeout_timestamp = env.block.time.plus_minutes(20).nanos();
+    response = response.add_attributes([
+        attr("source_port", &source_port),
+        attr("source_channel", &source_channel),
+        attr("receiver", &receiver),
+    ]);
     let ibc_transfer = NeutronMsg::IbcTransfer {
         source_port,
         source_channel,
@@ -229,20 +245,10 @@ pub(crate) fn execute_swap_callback(
         fee: min_ibc_fee,
     };
 
-    let mut response = Response::new().add_submessage(SubMsg::reply_on_success(
+    Ok(response.add_submessage(SubMsg::reply_on_success(
         ibc_transfer,
         IBC_TRANSFER_REPLY_ID,
-    ));
-
-    if let Some(refund) = refund {
-        let refund = coin(refund.u128(), ibc_fee_denom);
-        response = response.add_message(BankMsg::Send {
-            to_address: refund_address.into_string(),
-            amount: vec![refund.clone()],
-        })
-    }
-
-    Ok(response)
+    )))
 }
 
 fn calculate_min_ibc_fee(deps: Deps<NeutronQuery>, ibc_fee_denom: &str) -> ContractResult<IbcFee> {
