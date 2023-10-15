@@ -19,6 +19,12 @@ fn test() {
         },
     )
     .unwrap();
+
+    let ibc_transfer_info = IBC_TRANSFER_INFO
+        .may_load(deps.as_mut().storage, (4, "chan"))
+        .unwrap();
+    assert_eq!(ibc_transfer_info, None);
+
     assert_eq!(response.messages.len(), 1);
     assert_eq!(
         response.messages[0].msg,
@@ -27,6 +33,7 @@ fn test() {
             amount: coins(30, "ibc_fee_denom"),
         })
     );
+
     assert_eq!(
         response.attributes,
         vec![
@@ -36,8 +43,4 @@ fn test() {
             attr("amount", "30ibc_fee_denom"),
         ]
     );
-    let ibc_transfer_info = IBC_TRANSFER_INFO
-        .may_load(deps.as_mut().storage, (4, "chan"))
-        .unwrap();
-    assert_eq!(ibc_transfer_info, None);
 }
