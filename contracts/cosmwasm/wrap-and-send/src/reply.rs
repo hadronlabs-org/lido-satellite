@@ -57,11 +57,8 @@ pub(crate) fn reply_ibc_transfer(
             (response.sequence_id, &response.channel),
             &context,
         )?;
-        Ok(Response::new().add_attributes([
-            attr("subaction", "ibc_transfer"),
-            attr("sequence_id", response.sequence_id.to_string()),
-            attr("channel", response.channel),
-        ]))
+
+        Ok(Response::new().add_attribute("ibc_sequence_id", response.sequence_id.to_string()))
     } else {
         unreachable!("because we use `SubMsg::reply_on_success`")
     }
