@@ -13,6 +13,8 @@ pub fn reply_wrap_callback(
     _env: Env,
     result: SubMsgResult,
 ) -> ContractResult<Response<NeutronMsg>> {
+    // TODO: put error string into attributes, it is always something like
+    //       "codespace: wasm, code: N", so never too big
     if let SubMsgResult::Err(_) = result {
         EXECUTION_FLAG.remove(deps.storage);
 

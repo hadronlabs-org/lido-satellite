@@ -93,6 +93,8 @@ pub fn craft_wrap_and_send_msg(amount_to_swap_for_ibc_fee: u128) -> ExecuteMsg {
             offer_denom: "canonical_denom".to_string(),
             ask_denom: "ibc_fee_denom".to_string(),
         }],
+        timeout: 1000,
+        ibc_memo: "memo".to_string(),
         refund_address: "refund_address".to_string(),
     }
 }
@@ -111,6 +113,8 @@ pub fn craft_wrap_callback_msg(
             offer_denom: "canonical_denom".to_string(),
             ask_denom: "ibc_fee_denom".to_string(),
         }],
+        timeout: 1000,
+        ibc_memo: "memo".to_string(),
         received_amount: received_amount.into(),
         refund_address: Addr::unchecked("refund_address"),
     }
@@ -121,6 +125,8 @@ pub fn craft_swap_callback_msg() -> ExecuteMsg {
         source_port: "source_port".to_string(),
         source_channel: "source_channel".to_string(),
         receiver: "receiver".to_string(),
+        timeout: 1000,
+        ibc_memo: "memo".to_string(),
         amount_to_send: coin(200, "canonical_denom"),
         min_ibc_fee: IbcFee {
             recv_fee: vec![],

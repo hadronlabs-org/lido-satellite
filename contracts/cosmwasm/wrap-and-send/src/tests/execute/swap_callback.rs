@@ -113,6 +113,11 @@ fn swapped_for_exact_amount() {
             attr("source_port", "source_port"),
             attr("source_channel", "source_channel"),
             attr("receiver", "receiver"),
+            attr(
+                "timeout_timestamp",
+                env.block.time.plus_nanos(1000).nanos().to_string()
+            ),
+            attr("ibc_memo", "memo"),
         ]
     );
 }
@@ -154,6 +159,11 @@ fn swapped_for_more_than_required() {
             attr("source_port", "source_port"),
             attr("source_channel", "source_channel"),
             attr("receiver", "receiver"),
+            attr(
+                "timeout_timestamp",
+                env.block.time.plus_nanos(1000).nanos().to_string()
+            ),
+            attr("ibc_memo", "memo"),
         ]
     );
 }
@@ -185,8 +195,8 @@ fn craft_ibc_transfer_message(env: &Env) -> CosmosMsg<NeutronMsg> {
             revision_number: None,
             revision_height: None,
         },
-        timeout_timestamp: env.block.time.plus_minutes(20).nanos(),
-        memo: "".to_string(),
+        timeout_timestamp: env.block.time.plus_nanos(1000).nanos(),
+        memo: "memo".to_string(),
         fee: IbcFee {
             recv_fee: vec![],
             ack_fee: coins(20, "ibc_fee_denom"),

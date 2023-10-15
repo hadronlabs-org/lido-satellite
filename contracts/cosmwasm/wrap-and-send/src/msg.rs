@@ -37,6 +37,11 @@ pub enum ExecuteMsg {
         /// canonical denom to IBC fee denom, otherwise transaction will revert and user will
         /// receive canonical funds and result of swap on their specified refund address
         astroport_swap_operations: Vec<SwapOperation>,
+        /// IBC timeout in nanoseconds, recommended value is 1 minute
+        /// (6e10 nsecs or 60_000_000_000 nsecs)
+        timeout: u64,
+        /// IBC memo, set `""` if unused
+        ibc_memo: String,
         /// Address of user account on Neutron network which will be used for all refunds
         refund_address: String,
     },
@@ -49,6 +54,8 @@ pub enum ExecuteMsg {
         amount_to_swap_for_ibc_fee: Uint128,
         ibc_fee_denom: String,
         astroport_swap_operations: Vec<SwapOperation>,
+        timeout: u64,
+        ibc_memo: String,
         received_amount: Uint128,
         refund_address: Addr,
     },
@@ -58,6 +65,8 @@ pub enum ExecuteMsg {
         source_port: String,
         source_channel: String,
         receiver: String,
+        timeout: u64,
+        ibc_memo: String,
         amount_to_send: Coin,
         min_ibc_fee: IbcFee,
         refund_address: Addr,

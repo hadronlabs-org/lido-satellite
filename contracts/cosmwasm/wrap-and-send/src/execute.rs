@@ -38,6 +38,8 @@ pub(crate) fn execute_wrap_and_send(
     amount_to_swap_for_ibc_fee: Uint128,
     ibc_fee_denom: String,
     astroport_swap_operations: Vec<SwapOperation>,
+    timeout: u64,
+    ibc_memo: String,
     refund_address: String,
 ) -> ContractResult<Response<NeutronMsg>> {
     if let Some(true) = EXECUTION_FLAG.may_load(deps.storage)? {
@@ -82,6 +84,8 @@ pub(crate) fn execute_wrap_and_send(
             amount_to_swap_for_ibc_fee,
             ibc_fee_denom,
             astroport_swap_operations,
+            timeout,
+            ibc_memo,
             received_amount,
             refund_address,
         })?,
@@ -104,6 +108,8 @@ pub(crate) fn execute_wrap_callback(
     amount_to_swap_for_ibc_fee: Uint128,
     ibc_fee_denom: String,
     astroport_swap_operations: Vec<SwapOperation>,
+    timeout: u64,
+    ibc_memo: String,
     received_amount: Uint128,
     refund_address: Addr,
 ) -> ContractResult<Response<NeutronMsg>> {
@@ -161,6 +167,8 @@ pub(crate) fn execute_wrap_callback(
             source_port,
             source_channel,
             receiver,
+            timeout,
+            ibc_memo,
             amount_to_send,
             min_ibc_fee,
             refund_address,
@@ -179,6 +187,8 @@ pub(crate) fn execute_swap_callback(
     source_port: String,
     source_channel: String,
     receiver: String,
+    timeout: u64,
+    ibc_memo: String,
     amount_to_send: Coin,
     min_ibc_fee: IbcFee,
     refund_address: Addr,
@@ -222,14 +232,16 @@ pub(crate) fn execute_swap_callback(
         },
     )?;
 
-    // 20 minutes should be enough for IBC transfer to go through
-    // FIXME: maybe better allow user to set their own timeout?
-    let timeout_timestamp = env.block.time.plus_minutes(20).nanos();
+    let timeout_timestamp = env.block.time.plus_nanos(timeout).nanos();
     response = response.add_attributes([
         attr("source_port", &source_port),
         attr("source_channel", &source_channel),
         attr("receiver", &receiver),
+        attr("timeout_timestamp", timeout_timestamp.to_string()),
     ]);
+    if !ibc_memo.is_empty() {
+        response = response.add_attribute("ibc_memo", &ibc_memo);
+    }
     let ibc_transfer = NeutronMsg::IbcTransfer {
         source_port,
         source_channel,
@@ -241,7 +253,7 @@ pub(crate) fn execute_swap_callback(
             revision_height: None,
         },
         timeout_timestamp,
-        memo: "".to_string(),
+        memo: ibc_memo,
         fee: min_ibc_fee,
     };
 

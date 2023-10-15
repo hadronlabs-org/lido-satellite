@@ -156,7 +156,7 @@ if [[ "$(get_balance_neutron "$SECOND_WALLET_ADDR_NEUTRON" "$ATOM_ON_NEUTRON_IBC
   gaiad tx ibc-transfer transfer "transfer" "channel-0" "$SECOND_WALLET_ADDR_NEUTRON" 10000uatom --from demowallet1 "${gtx[@]}" -s "$seq" >/dev/null
 fi
 ((attempts=200))
-while ! [[ "$(get_balance_neutron "$MAIN_WALLET_ADDR_NEUTRON" "$ATOM_ON_NEUTRON_IBC_DENOM")" -ge 20000 ]]; do
+while [[ "$(get_balance_neutron "$MAIN_WALLET_ADDR_NEUTRON" "$ATOM_ON_NEUTRON_IBC_DENOM")" -lt 20000 ]]; do
   echo -n "."
   ((attempts=attempts-1)) || {
     echo "seems like IBC transfer failed" 1>&2
@@ -164,7 +164,7 @@ while ! [[ "$(get_balance_neutron "$MAIN_WALLET_ADDR_NEUTRON" "$ATOM_ON_NEUTRON_
   }
   sleep 0.1
 done
-while ! [[ "$(get_balance_neutron "$SECOND_WALLET_ADDR_NEUTRON" "$ATOM_ON_NEUTRON_IBC_DENOM")" -ge 10000 ]]; do
+while [[ "$(get_balance_neutron "$SECOND_WALLET_ADDR_NEUTRON" "$ATOM_ON_NEUTRON_IBC_DENOM")" -lt 10000 ]]; do
   echo -n "."
   ((attempts=attempts-1)) || {
     echo "seems like IBC transfer failed" 1>&2
@@ -271,6 +271,8 @@ msg="$(printf '{
     "amount_to_swap_for_ibc_fee": "300",
     "ibc_fee_denom": "untrn",
     "astroport_swap_operations": [{"native_swap":{"offer_denom": "%s", "ask_denom":"untrn"}}],
+    "timeout": 60000000000,
+    "ibc_memo": "",
     "refund_address": "%s"
   }
 }' "$MAIN_WALLET_ADDR_GAIA" "factory/$lido_satellite_contract_address/wATOM" "$refund_address")"
@@ -310,6 +312,8 @@ msg="$(printf '{
     "amount_to_swap_for_ibc_fee": "400",
     "ibc_fee_denom": "untrn",
     "astroport_swap_operations": [{"native_swap":{"offer_denom": "%s", "ask_denom":"untrn"}}],
+    "timeout": 60000000000,
+    "ibc_memo": "",
     "refund_address": "%s"
   }
 }' "$MAIN_WALLET_ADDR_GAIA" "factory/$lido_satellite_contract_address/wATOM" "$refund_address")"
@@ -347,6 +351,8 @@ msg="$(printf '{
     "amount_to_swap_for_ibc_fee": "200",
     "ibc_fee_denom": "untrn",
     "astroport_swap_operations": [{"native_swap":{"offer_denom": "%s", "ask_denom":"untrn"}}],
+    "timeout": 60000000000,
+    "ibc_memo": "",
     "refund_address": "%s"
   }
 }' "$MAIN_WALLET_ADDR_GAIA" "factory/$lido_satellite_contract_address/wATOM" "$refund_address")"
@@ -368,6 +374,8 @@ msg="$(printf '{
     "amount_to_swap_for_ibc_fee": "100",
     "ibc_fee_denom": "untrn",
     "astroport_swap_operations": [{"native_swap":{"offer_denom": "%s", "ask_denom":"untrn"}}],
+    "timeout": 60000000000,
+    "ibc_memo": "",
     "refund_address": "%s"
   }
 }' "$MAIN_WALLET_ADDR_GAIA" "factory/$lido_satellite_contract_address/wATOM" "$refund_address")"
@@ -389,6 +397,8 @@ msg="$(printf '{
     "amount_to_swap_for_ibc_fee": "300",
     "ibc_fee_denom": "untrn",
     "astroport_swap_operations": [{"native_swap":{"offer_denom": "%s", "ask_denom":"untrn"}}],
+    "timeout": 60000000000,
+    "ibc_memo": "",
     "refund_address": "%s"
   }
 }' "$MAIN_WALLET_ADDR_GAIA" "factory/$lido_satellite_contract_address/wATOM" "$refund_address")"
@@ -410,6 +420,8 @@ msg="$(printf '{
     "amount_to_swap_for_ibc_fee": "300",
     "ibc_fee_denom": "untrn",
     "astroport_swap_operations": [{"native_swap":{"offer_denom": "%s", "ask_denom":"untrn"}}],
+    "timeout": 60000000000,
+    "ibc_memo": "",
     "refund_address": "%s"
   }
 }' "$MAIN_WALLET_ADDR_GAIA" "factory/$lido_satellite_contract_address/wATOM" "$refund_address")"
@@ -431,6 +443,8 @@ msg="$(printf '{
     "amount_to_swap_for_ibc_fee": "300",
     "ibc_fee_denom": "untrn",
     "astroport_swap_operations": [{"native_swap":{"offer_denom": "%s", "ask_denom":"untrn"}}],
+    "timeout": 60000000000,
+    "ibc_memo": "",
     "refund_address": "%s"
   }
 }' "$MAIN_WALLET_ADDR_GAIA" "factory/$lido_satellite_contract_address/wATOM" "$refund_address")"
@@ -452,6 +466,8 @@ msg="$(printf '{
     "amount_to_swap_for_ibc_fee": "300",
     "ibc_fee_denom": "untrn",
     "astroport_swap_operations": [{"native_swap":{"offer_denom": "%s", "ask_denom":"untrn"}}],
+    "timeout": 60000000000,
+    "ibc_memo": "",
     "refund_address": "%s"
   }
 }' "factory/$lido_satellite_contract_address/wATOM" "$refund_address")"
@@ -473,6 +489,8 @@ msg="$(printf '{
     "amount_to_swap_for_ibc_fee": "0",
     "ibc_fee_denom": "untrn",
     "astroport_swap_operations": [{"native_swap":{"offer_denom": "%s", "ask_denom":"untrn"}}],
+    "timeout": 60000000000,
+    "ibc_memo": "",
     "refund_address": "%s"
   }
 }' "$MAIN_WALLET_ADDR_GAIA" "factory/$lido_satellite_contract_address/wATOM" "$refund_address")"
@@ -494,6 +512,8 @@ msg="$(printf '{
     "amount_to_swap_for_ibc_fee": "500",
     "ibc_fee_denom": "untrn",
     "astroport_swap_operations": [{"native_swap":{"offer_denom": "%s", "ask_denom":"untrn"}}],
+    "timeout": 60000000000,
+    "ibc_memo": "",
     "refund_address": "%s"
   }
 }' "$MAIN_WALLET_ADDR_GAIA" "factory/$lido_satellite_contract_address/wATOM" "$refund_address")"
@@ -518,6 +538,8 @@ msg="$(printf '{
     "amount_to_swap_for_ibc_fee": "600",
     "ibc_fee_denom": "uibcatom",
     "astroport_swap_operations": [{"native_swap":{"offer_denom": "%s", "ask_denom":"untrn"}}],
+    "timeout": 60000000000,
+    "ibc_memo": "",
     "refund_address": "%s"
   }
 }' "$MAIN_WALLET_ADDR_GAIA" "factory/$lido_satellite_contract_address/wATOM" "$refund_address")"
@@ -543,6 +565,8 @@ msg="$(printf '{
     "amount_to_swap_for_ibc_fee": "300",
     "ibc_fee_denom": "untrn",
     "astroport_swap_operations": [],
+    "timeout": 60000000000,
+    "ibc_memo": "",
     "refund_address": "%s"
   }
 }' "$MAIN_WALLET_ADDR_GAIA" "$refund_address")"
