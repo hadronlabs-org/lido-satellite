@@ -577,3 +577,44 @@ assert_balance_neutron "$astroport_router_contract_address" "factory/$lido_satel
 assert_balance_neutron "$astroport_router_contract_address" "untrn" "95666"
 assert_balance_neutron "$lido_satellite_contract_address" "$ATOM_ON_NEUTRON_IBC_DENOM" "9200"
 assert_no_funds_neutron "$wrap_and_send_contract_address"
+
+echo
+echo "Rainy day scenario: mint 500wATOM, swap 300wATOM for IBC fee, initiate transfer of 200wATOM to Gaia, but IBC transfer times out"
+msg="$(printf '{
+  "wrap_and_send": {
+    "source_port": "transfer",
+    "source_channel": "channel-0",
+    "receiver": "%s",
+    "amount_to_swap_for_ibc_fee": "300",
+    "ibc_fee_denom": "untrn",
+    "astroport_swap_operations": [{"native_swap":{"offer_denom": "%s", "ask_denom":"untrn"}}],
+    "timeout": 100000000,
+    "ibc_memo": "",
+    "refund_address": "%s"
+  }
+}' "$MAIN_WALLET_ADDR_GAIA" "factory/$lido_satellite_contract_address/wATOM" "$refund_address")"
+neutrond tx wasm execute "$wrap_and_send_contract_address" "$msg" --amount "500$ATOM_ON_NEUTRON_IBC_DENOM" --from "$MAIN_WALLET" "${ntx[@]}" | wait_ntx | assert_success
+assert_balance_neutron "$refund_address" "untrn" "2334"
+assert_balance_neutron "$refund_address" "factory/$lido_satellite_contract_address/wATOM" "4200"
+assert_balance_neutron "$astroport_router_contract_address" "factory/$lido_satellite_contract_address/wATOM" "1000"
+assert_balance_neutron "$astroport_router_contract_address" "untrn" "93666"
+assert_balance_neutron "$lido_satellite_contract_address" "$ATOM_ON_NEUTRON_IBC_DENOM" "9700"
+assert_no_funds_neutron "$wrap_and_send_contract_address"
+
+echo -n "Waiting for IBC transfer to time out"
+((attempts=200))
+while ! [[ "$(get_balance_neutron "$refund_address" "untrn")" -eq 3334 ]]; do
+  echo -n "."
+  ((attempts-=1)) || {
+    echo "seems like IBC transfer failed" 1>&2
+    exit 1
+  }
+  sleep 0.1
+done
+echo " done"
+
+assert_balance_neutron "$refund_address" "untrn" "3334"
+assert_balance_neutron "$refund_address" "factory/$lido_satellite_contract_address/wATOM" "4400"
+assert_balance_neutron "$lido_satellite_contract_address" "$ATOM_ON_NEUTRON_IBC_DENOM" "9700"
+assert_balance_gaia "$MAIN_WALLET_ADDR_GAIA" "$watom_on_gaia_ibc_denom" "1800"
+assert_no_funds_neutron "$wrap_and_send_contract_address"
