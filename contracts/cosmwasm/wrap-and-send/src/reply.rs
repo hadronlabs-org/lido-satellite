@@ -19,14 +19,18 @@ pub fn reply_wrap_callback(
         let refund_info = REFUND_INFO.load(deps.storage)?;
         REFUND_INFO.remove(deps.storage);
 
+        let response = Response::new().add_attributes([
+            attr("status", "failure"),
+            attr("action", "refund"),
+            attr("refund_amount", refund_info.funds.to_string()),
+        ]);
         let send_msg: CosmosMsg<NeutronMsg> = BankMsg::Send {
             to_address: refund_info.refund_address.into_string(),
             amount: vec![refund_info.funds],
         }
         .into();
 
-        // TODO: attributes
-        Ok(Response::new().add_message(send_msg))
+        Ok(response.add_message(send_msg))
     } else {
         unreachable!("because we use `SubMsg::reply_on_error`")
     }
