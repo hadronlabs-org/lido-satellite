@@ -260,6 +260,8 @@ echo "Wrap and Send Contract address: $wrap_and_send_contract_address"
 # a very easy way in a shell script to create a random account is to spawn some unused contract :)))
 refund_address="$(neutrond tx wasm instantiate "$wrap_and_send_code_id" "$msg" --no-admin --label refund --from "$MAIN_WALLET" "${ntx[@]}" | wait_ntx | jq -r "$(select_attr "instantiate" "_contract_address")")"
 echo "Refund address: $refund_address"
+multihop_benefitiary_address="$(neutrond tx wasm instantiate "$wrap_and_send_code_id" "$msg" --no-admin --label refund --from "$MAIN_WALLET" "${ntx[@]}" | wait_ntx | jq -r "$(select_attr "instantiate" "_contract_address")")"
+echo "Multihop benefitiary address: $multihop_benefitiary_address"
 
 echo
 echo "Ideal scenario: mint 1000wATOM, swap 300wATOM for IBC fee (and receive exactly as many as needed), send 700wATOM to Gaia"
@@ -588,7 +590,7 @@ msg="$(printf '{
     "amount_to_swap_for_ibc_fee": "300",
     "ibc_fee_denom": "untrn",
     "astroport_swap_operations": [{"native_swap":{"offer_denom": "%s", "ask_denom":"untrn"}}],
-    "timeout": 100000000,
+    "timeout": 1000000,
     "ibc_memo": "",
     "refund_address": "%s"
   }
@@ -602,11 +604,12 @@ assert_balance_neutron "$lido_satellite_contract_address" "$ATOM_ON_NEUTRON_IBC_
 assert_no_funds_neutron "$wrap_and_send_contract_address"
 
 echo -n "Waiting for IBC transfer to time out"
-((attempts=200))
+# sometimes timeout may take a lot of time to be submitted, and I don't know why
+((attempts=2000))
 while ! [[ "$(get_balance_neutron "$refund_address" "untrn")" -eq 3334 ]]; do
   echo -n "."
   ((attempts-=1)) || {
-    echo "seems like IBC transfer failed" 1>&2
+    echo "something went wrong" 1>&2
     exit 1
   }
   sleep 0.1
@@ -617,4 +620,51 @@ assert_balance_neutron "$refund_address" "untrn" "3334"
 assert_balance_neutron "$refund_address" "factory/$lido_satellite_contract_address/wATOM" "4400"
 assert_balance_neutron "$lido_satellite_contract_address" "$ATOM_ON_NEUTRON_IBC_DENOM" "9700"
 assert_balance_gaia "$MAIN_WALLET_ADDR_GAIA" "$watom_on_gaia_ibc_denom" "1800"
+assert_no_funds_neutron "$wrap_and_send_contract_address"
+
+echo
+echo "Ideal scenario with multihop: mint 800wATOM, swap 300wATOM for IBC fee, initiate multihop transfer of 500wATOM to Neutron through Gaia"
+msg="$(printf '{
+  "wrap_and_send": {
+    "source_port": "transfer",
+    "source_channel": "channel-0",
+    "receiver": "%s",
+    "amount_to_swap_for_ibc_fee": "300",
+    "ibc_fee_denom": "untrn",
+    "astroport_swap_operations": [{"native_swap":{"offer_denom": "%s", "ask_denom":"untrn"}}],
+    "timeout": 60000000000,
+    "ibc_memo": "{\\"forward\\": {\\"receiver\\": \\"%s\\", \\"port\\": \\"transfer\\", \\"channel\\": \\"channel-0\\"}}",
+    "refund_address": "%s"
+  }
+}' "$MAIN_WALLET_ADDR_GAIA" "factory/$lido_satellite_contract_address/wATOM" "$multihop_benefitiary_address" "$refund_address")"
+neutrond tx wasm execute "$wrap_and_send_contract_address" "$msg" --amount "800$ATOM_ON_NEUTRON_IBC_DENOM" --from "$MAIN_WALLET" "${ntx[@]}" | wait_ntx | assert_success
+assert_balance_neutron "$refund_address" "untrn" "3334"
+assert_balance_neutron "$astroport_router_contract_address" "factory/$lido_satellite_contract_address/wATOM" "1300"
+assert_balance_neutron "$astroport_router_contract_address" "untrn" "91666"
+assert_balance_neutron "$lido_satellite_contract_address" "$ATOM_ON_NEUTRON_IBC_DENOM" "10500"
+assert_no_funds_neutron "$wrap_and_send_contract_address"
+
+echo -n "Waiting for IBC transfers to complete"
+((attempts=400))
+while ! [[ "$(get_balance_neutron "$multihop_benefitiary_address" "factory/$lido_satellite_contract_address/wATOM")" -eq 500 ]]; do
+  echo -n "."
+  ((attempts-=1)) || {
+    echo "seems like IBC transfer failed" 1>&2
+    exit 1
+  }
+  sleep 0.1
+done
+while ! [[ "$(get_balance_neutron "$refund_address" "untrn")" -eq 4334 ]]; do
+  echo -n "."
+  ((attempts-=1)) || {
+    echo "seems like IBC transfer failed" 1>&2
+    exit 1
+  }
+  sleep 0.1
+done
+echo " done"
+
+assert_balance_neutron "$refund_address" "untrn" "4334"
+assert_balance_neutron "$lido_satellite_contract_address" "$ATOM_ON_NEUTRON_IBC_DENOM" "10500"
+assert_balance_neutron "$multihop_benefitiary_address" "factory/$lido_satellite_contract_address/wATOM" "500"
 assert_no_funds_neutron "$wrap_and_send_contract_address"
