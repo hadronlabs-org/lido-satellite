@@ -17,7 +17,11 @@ check_contracts:
 	@cosmwasm-check --available-capabilities iterator,staking,stargate,neutron artifacts/*.wasm
 
 compile:
-	@scripts/build_release.sh
+	@docker run --rm -v "$(CURDIR)":/code \
+		--mount type=volume,source="$(notdir $(CURDIR))_cache",target=/target \
+		--mount type=volume,source=registry_cache,target=/usr/local/cargo/registry \
+		--platform linux/amd64 \
+		cosmwasm/workspace-optimizer:0.14.0
 
 build: schema clippy fmt test compile check_contracts
 
