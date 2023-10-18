@@ -203,67 +203,144 @@
 
     <hr>
     <h1>Execute smart contract</h1>
-    <h4>This demo described how to execute a smart contract, as an example setting allowance on wstETH</h4>
-    <label for="execute_amount">Amount of wstETH-wei to transfer:</label><br>
-    <input type="text" id="execute_amount" name="execute_amount" size="20" value="200"/><br><br>
-    <button onclick="execute_approve()">Execute demo: set allowance</button>
-    <button onclick="execute_allowance()">Execute demo: get allowance</button>
-    <div class="results" id="execute_results"></div>
+    <h4>This demo describes how to execute forward() function on GMP Helper (requires allowance)</h4>
+    <p>In this example a following path is implemented: Ethereum → Axelar → Neutron → Terra → Neutron</p>
+    <label for="forward_amount">Amount of wstETH-wei to transfer:</label><br>
+    <input type="text" id="forward_amount" name="forward_amount" size="20" value="123000000"/><br><br>
+    <label for="forward_ibc_fee">Amount of wstETH-wei to spend on IBC fee:</label><br>
+    <input type="text" id="forward_ibc_fee" name="forward_ibc_fee" size="20" value="100000000"/><br><br>
+    <label for="forward_axelar_fee">Amount of ETH-wei to spend on Axelar fee:</label><br>
+    <input type="text" id="forward_axelar_fee" name="forward_axelar_fee" size="20" value="0x2386f26fc10000"/><br><br>
+    <button onclick="execute_forward()">Execute demo: forward()</button>
+    <div class="results" id="forward_results"></div>
     <script>
-        async function execute_approve() {
+        async function execute_forward() {
             const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
             const owner = accounts[0];
-            const amount = document.getElementById("execute_amount").value;
-            const spender = "0xDC80000b002048Cf49420e1ED1Ae985Bc55994E6";
+            const abi = ["function forward(bytes calldata gmpPayload, uint256 amount, address gasRefundAddress) external payable returns (bool success)"];
             const provider = new ethers.providers.Web3Provider(window.ethereum);
             const signer = provider.getSigner(owner);
-            const abi = [
-                "function approve(address _spender, uint256 _amount) public returns (bool success)"
-            ];
-            const wstEthContract = new ethers.Contract("0x6320cD32aA674d2898A68ec82e869385Fc5f7E2f", abi, signer);
+            const gmpHelper = new ethers.Contract("0xEA5b80cFBbB9A61367675446c62782f41892D632", abi, signer);
 
-            const executeResults = document.getElementById("execute_results");
-            let child = executeResults.lastElementChild;
+            const amount = document.getElementById("forward_amount").value;
+            const ibcFee = document.getElementById("forward_ibc_fee").value;
+            const axelarFee = document.getElementById("forward_axelar_fee").value;
+
+            const forwardResults = document.getElementById("forward_results");
+            let child = forwardResults.lastElementChild;
             while (child) {
-                executeResults.removeChild(child);
-                child = executeResults.lastElementChild;
+                forwardResults.removeChild(child);
+                child = forwardResults.lastElementChild;
             }
 
-            const approveTxUnsigned = await wstEthContract.populateTransaction.approve(spender, amount);
-            const txhash = await window.ethereum.request({
-                method: 'eth_sendTransaction',
-                params: [approveTxUnsigned],
+            // set to empty string to avoid using IBC hooks
+            const memo = JSON.stringify({forward:{
+                receiver: "neutron10kvpy9lt3lu24jd8rt9vewrnagpkq5e6r7vcfa",
+                port: "transfer",
+                channel: "channel-284",
+            }});
+
+            const payload = JSON.stringify({
+                "wrap_and_send": {
+                    "amount_to_swap_for_ibc_fee": ibcFee,
+                    "astroport_swap_operations": [
+                        {
+                            "astro_swap": {
+                                "ask_asset_info": {
+                                    "native_token": {
+                                        "denom": "ibc/F91EA2C0A23697A1048E08C2F787E3A58AC6F706A1CD2257A504925158CFC0F3"
+                                    }
+                                },
+                                "offer_asset_info": {
+                                    "native_token": {
+                                        "denom": "factory/neutron1xdtwh5jr4zjx8g3zh29jud75c666wua7tsmum3ajm6ylf782etfs60dj2h/wstETH"
+                                    }
+                                }
+                            }
+                        },
+                        {
+                            "astro_swap": {
+                                "ask_asset_info": {
+                                    "native_token": {
+                                        "denom": "ibc/C4CFF46FD6DE35CA4CF4CE031E643C8FDC9BA4B99AE598E9B0ED98FE3A2319F9"
+                                    }
+                                },
+                                "offer_asset_info": {
+                                    "native_token": {
+                                        "denom": "ibc/F91EA2C0A23697A1048E08C2F787E3A58AC6F706A1CD2257A504925158CFC0F3"
+                                    }
+                                }
+                            }
+                        },
+                        {
+                            "astro_swap": {
+                                "ask_asset_info": {
+                                    "native_token": {
+                                        "denom": "ibc/EFB00E728F98F0C4BBE8CA362123ACAB466EDA2826DC6837E49F4C1902F21BBA"
+                                    }
+                                },
+                                "offer_asset_info": {
+                                    "native_token": {
+                                        "denom": "ibc/C4CFF46FD6DE35CA4CF4CE031E643C8FDC9BA4B99AE598E9B0ED98FE3A2319F9"
+                                    }
+                                }
+                            }
+                        },
+                        {
+                            "astro_swap": {
+                                "ask_asset_info": {
+                                    "native_token": {
+                                        "denom": "ibc/584A4A23736884E0C198FD1EE932455A9357A492A7B94324E4A02B5628687831"
+                                    }
+                                },
+                                "offer_asset_info": {
+                                    "native_token": {
+                                        "denom": "ibc/EFB00E728F98F0C4BBE8CA362123ACAB466EDA2826DC6837E49F4C1902F21BBA"
+                                    }
+                                }
+                            }
+                        },
+                        {
+                            "astro_swap": {
+                                "ask_asset_info": {
+                                    "native_token": {
+                                        "denom": "untrn"
+                                    }
+                                },
+                                "offer_asset_info": {
+                                    "native_token": {
+                                        "denom": "ibc/584A4A23736884E0C198FD1EE932455A9357A492A7B94324E4A02B5628687831"
+                                    }
+                                }
+                            }
+                        }
+                    ],
+                    "ibc_fee_denom": "untrn",
+                    "ibc_memo": memo,
+                    "receiver": "terra1c2qsse4duwxsg78xv9m96z08v9pacpaznqfz63",
+                    "refund_address": "neutron10kvpy9lt3lu24jd8rt9vewrnagpkq5e6r7vcfa",
+                    "source_channel": "channel-98",
+                    "source_port": "transfer",
+                    "timeout": 60000000000
+                }
             });
+            const versionedPayload = [0, 0, 0, 2, ...(new TextEncoder()).encode(payload)];
+            const forwardTxUnsigned = await gmpHelper.populateTransaction.forward(
+                versionedPayload,
+                amount,
+                "0x0000000000000000000000000000000000000000",
+            );
+            forwardTxUnsigned.value = "0x" + (+axelarFee).toString(16);
+            const txHash = await window.ethereum.request({
+                method: 'eth_sendTransaction',
+                params: [forwardTxUnsigned],
+            });
+            console.log(txHash);
 
             const a = document.createElement("a");
-            a.textContent = `${txhash} on Görli Etherscan`;
-            a.href = `https://goerli.etherscan.io/tx/${txhash}`;
-            executeResults.appendChild(a);
-        }
-
-        async function execute_allowance() {
-            const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-            const owner = accounts[0];
-            const spender = "0xDC80000b002048Cf49420e1ED1Ae985Bc55994E6";
-            const provider = new ethers.providers.Web3Provider(window.ethereum);
-            const signer = provider.getSigner(owner);
-            const abi = [
-                "function allowance(address _owner, address _apender) public view returns (uint256)",
-            ];
-            const wstEthContract = new ethers.Contract("0x6320cD32aA674d2898A68ec82e869385Fc5f7E2f", abi, signer);
-
-            const executeResults = document.getElementById("execute_results");
-            let child = executeResults.lastElementChild;
-            while (child) {
-                executeResults.removeChild(child);
-                child = executeResults.lastElementChild;
-            }
-
-            const allowance = await wstEthContract.allowance(owner, spender);
-
-            const p = document.createElement("p");
-            p.appendChild(document.createTextNode(`${owner} has a following allowance for ${spender} on wstETH: ${allowance.toString()}`));
-            executeResults.appendChild(p);
+            a.textContent = `${txHash} on Görli Etherscan`;
+            a.href = `https://goerli.etherscan.io/tx/${txHash}`;
+            forwardResults.appendChild(a);
         }
     </script>
 </body>

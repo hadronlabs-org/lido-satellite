@@ -27,6 +27,8 @@ contract GmpHelper {
     IWSTETH public immutable WST_ETH;
     // Address of Lido Satellite contract on Neutron, replace it with a real address before deploying
     string public constant LIDO_SATELLITE = "neutron1ug740qrkquxzrk2hh29qrlx3sktkfml3je7juusc2te7xmvsscns0n2wry";
+    // Address of Wrap And Send contract on Neutron, replace it with a real address before deploying
+    string public constant WRAP_AND_SEND = "neutron13nh5amfpj6nwrg9sr69zrjmlhdgtk7g3xjg7d5gt3qnjujgus55sqksu4t";
     string public constant DESTINATION_CHAIN = "neutron";
     string public constant WSTETH_SYMBOL = "wstETH";
 
@@ -112,6 +114,74 @@ contract GmpHelper {
             DESTINATION_CHAIN,
             LIDO_SATELLITE,
             payload,
+            WSTETH_SYMBOL,
+            amount
+        );
+    }
+
+    /// @notice Forward `amount` of wstETH through Neutron to some other chain.
+    ///         Requires allowance on wstETH contract.
+    ///         Requires gas fee in ETH.
+    /// @param gmpPayload Versioned GMP payload with encoded `ExecuteMsg::WrapAndSend` for Wrap And Send contract.
+    /// @param amount Amount of wstETH-wei to attach to contract call
+    /// @param gasRefundAddress Address which receives ETH refunds from Axelar,
+    ///        use 0 to default to msg.sender
+    function forward(
+        bytes calldata gmpPayload,
+        uint256 amount,
+        address gasRefundAddress
+    ) external payable {
+        _forward(gmpPayload, amount, gasRefundAddress);
+    }
+
+    /// @notice Forward `amount` of wstETH through Neutron to some other chain, using EIP-2612 permit.
+    ///         Requires gas fee in ETH.
+    /// @param gmpPayload Versioned GMP payload with encoded `ExecuteMsg::WrapAndSend` for Wrap And Send contract.
+    /// @param amount Amount of wstETH-wei to attach to contract call
+    /// @param deadline EIP-2612 permit signature deadline
+    /// @param v Value `v` of EIP-2612 permit signature
+    /// @param r Value `r` of EIP-2612 permit signature
+    /// @param s Value `s` of EIP-2612 permit signature
+    /// @param gasRefundAddress Address which receives ETH refunds from Axelar,
+    ///        use 0 to default to msg.sender
+    function forwardWithPermit(
+        bytes calldata gmpPayload,
+        uint256 amount,
+        uint256 deadline,
+        uint8 v,
+        bytes32 r,
+        bytes32 s,
+        address gasRefundAddress
+    ) external payable {
+        WST_ETH.permit(msg.sender, address(this), amount, deadline, v, r, s);
+        _forward(gmpPayload, amount, gasRefundAddress);
+    }
+
+    function _forward(
+        bytes calldata gmpPayload,
+        uint256 amount,
+        address gasRefundAddress
+    ) internal {
+        // 1. withdraw wstETH from caller and approve it for Axelar Gateway.
+        WST_ETH.transferFrom(msg.sender, address(this), amount);
+        WST_ETH.approve(address(GATEWAY), amount);
+
+        // 2. Pay for gas
+        GAS_SERVICE.payNativeGasForContractCallWithToken{value: msg.value}(
+            address(this),
+            DESTINATION_CHAIN,
+            WRAP_AND_SEND,
+            gmpPayload,
+            WSTETH_SYMBOL,
+            amount,
+            gasRefundAddress == address(0) ? msg.sender : gasRefundAddress
+        );
+
+        // 3. Make GMP call
+        GATEWAY.callContractWithToken(
+            DESTINATION_CHAIN,
+            WRAP_AND_SEND,
+            gmpPayload,
             WSTETH_SYMBOL,
             amount
         );
