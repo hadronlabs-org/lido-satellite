@@ -1,5 +1,6 @@
 [workspace]
 members = [ "contracts/cosmwasm/*" ]
+resolver = "2"
 
 [workspace.package]
 authors = ["Murad Karammaev <muradkarammaev@gmail.com>"]
@@ -17,3 +18,11 @@ codegen-units = 1
 panic = 'abort'
 incremental = false
 overflow-checks = true
+
+[workspace.dependencies]
+cosmwasm-schema = "1.5.0"
+cosmwasm-std = "1.5.0"
+cw-storage-plus = "1.2.0"
+neutron-sdk = "0.7.0"
+cw2 = "1.1.2"
+thiserror = "1.0.50"

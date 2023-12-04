@@ -3,13 +3,13 @@ use crate::{
     msg::{ConfigResponse, QueryMsg},
     tests::helpers::{instantiate_wrapper, VALID_IBC_DENOM},
 };
-use cosmwasm_std::from_binary;
+use cosmwasm_std::from_json;
 
 #[test]
 fn corresponds_to_instantiate_params() {
     let (_result, deps, env) = instantiate_wrapper(VALID_IBC_DENOM, "eth");
     let config_response: ConfigResponse =
-        from_binary(&query(deps.as_ref(), env, QueryMsg::Config {}).unwrap()).unwrap();
+        from_json(query(deps.as_ref(), env, QueryMsg::Config {}).unwrap()).unwrap();
     assert_eq!(
         config_response,
         ConfigResponse {
