@@ -59,7 +59,7 @@ pub(crate) fn execute_burn(
         ]))
 }
 
-fn find_denom<'a>(funds: &'a [Coin], target_denom: &str) -> ContractResult<Option<&'a Coin>> {
+pub fn find_denom<'a>(funds: &'a [Coin], target_denom: &str) -> ContractResult<Option<&'a Coin>> {
     match funds.len() {
         0 => Ok(None),
         1 => Ok({
