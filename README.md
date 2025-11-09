@@ -65,8 +65,8 @@ requiring them to sign only 2 transactions on Ethereum instead of 3.
 There is a hardcoded `LIDO_SATELLITE` constant string in `gmp-helper.sol`. It is hardcoded in order
 to save gas and to avoid using contract storage. You have to update it with a corrrect value before
 deploying a contract. You can retrieve Lido Satellite address from Neutron documentation,
-there is a page for [testnet](https://docs.neutron.org/deployment/testnet#bridge)
-and a page for [mainnet](https://docs.neutron.org/deployment/mainnet#bridge).
+there is a page for [testnet](https://docs.neutron.org/resources/contracts/testnet)
+and a page for [mainnet](https://docs.neutron.org/resources/contracts/mainnet).
 
 #### 2. Set Etherscan API key and network private keys
 
